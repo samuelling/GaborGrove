@@ -152,8 +152,24 @@ legend{float:left;padding:0;margin-right:8px;font-size:11px;color:var(--dim)}
     </div>
   </div>
   <div class="row more">
+    <fieldset>
+      <legend>3D</legend>
+      <div class="seg">
+        <label><input type="radio" name="stereo" id="stOff" value="0" checked><span>Off</span></label>
+        <label><input type="radio" name="stereo" id="stBG" value="1"><span>Blue/green</span></label>
+        <label><input type="radio" name="stereo" id="stRC" value="2"><span>Red/cyan</span></label>
+      </div>
+    </fieldset>
+    <div class="speed" id="depthRow" hidden>
+      <label for="depth">3D depth</label>
+      <input id="depth" type="range" min="0" max="100" step="1" value="40">
+      <output id="depthOut" for="depth">40%</output>
+    </div>
+  </div>
+  <div class="row more">
     <label class="check"><input type="checkbox" id="carriers" checked>Carriers on</label>
     <label class="check"><input type="checkbox" id="env">Rotate envelopes too</label>
+    <label class="check" id="swapWrap" hidden><input type="checkbox" id="swap"><span id="swapText">Swap eyes</span></label>
     <button id="hide" type="button">Less</button>
   </div>
   <div class="row" id="moreRow" hidden>
@@ -538,6 +554,7 @@ void main(){
 }`;
 const FS=`#version 300 es
 precision highp float;
+uniform float uGray;
 in vec2 vUV;in vec2 vKq;in float vPhase;in float vAmp;in vec3 vC1;in vec3 vC2;in vec4 vPar;in float vR2;
 out vec4 o;
 void main(){
@@ -546,6 +563,7 @@ void main(){
   float g=exp(-0.5*r2);
   float c=cos(dot(vKq,vUV)+vPhase)*vAmp;
   vec3 col=mix(vC1,vC2,0.5-0.5*vPar.y*c);
+  if(uGray>0.5)col=vec3(dot(col,vec3(0.2126,0.7152,0.0722)));
   float a=vPar.x*g*(1.0-vPar.z*(0.5-0.5*c));
   o=vec4(col*a,a*vPar.w);
 }`;
@@ -555,7 +573,7 @@ const prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,VS));gl.a
 gl.bindAttribLocation(prog,0,'aIndex');gl.linkProgram(prog);
 if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog));
 gl.useProgram(prog);
-const U={};for(const n of['uData','uCamPos','uR','uU','uF','uAxis','uFog','uViewport','uOffset','uFocal','uTime','uTheta','uWave','uCarrier','uEnv','uAxisMode','uSpread','uFogK','uSigma','uSF','uContrast'])U[n]=gl.getUniformLocation(prog,n);
+const U={};for(const n of['uData','uCamPos','uR','uU','uF','uAxis','uFog','uViewport','uOffset','uFocal','uTime','uTheta','uWave','uCarrier','uEnv','uAxisMode','uSpread','uFogK','uSigma','uSF','uContrast','uGray'])U[n]=gl.getUniformLocation(prog,n);
 
 gl.activeTexture(gl.TEXTURE0);gl.uniform1i(U.uData,0);
 
@@ -571,7 +589,7 @@ out vec4 o;
 vec3 enc(vec3 c){c=clamp(c,0.0,1.0);return mix(c*12.92,1.055*pow(c,vec3(1.0/2.4))-0.055,step(vec3(0.0031308),c));}
 void main(){
   vec4 c=texelFetch(uSrc,ivec2(gl_FragCoord.xy),0);
-  vec3 lin=c.rgb+(1.0-c.a)*0.5;
+  vec3 lin=c.rgb;
   float d=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(0.06711056,0.00583715))))-0.5;
   o=vec4(enc(lin)+d/255.0,1.0);
 }`;
@@ -619,7 +637,7 @@ const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').m
 const cams={grove:{yaw:-0.5,pitch:-0.03,dist:6.8,target:[0.1,1.3,0],pmin:-0.16,pmax:1.35,dmax:13},
   gabor:{yaw:0,pitch:0,dist:10,target:[0,0,0],pmin:-1.45,pmax:1.45,dmax:24}};
 let cam=cams.grove;const axisBy={grove:0,gabor:1};
-const S={scene:'grove',spread:0,sigma:1,sf:1,sfEff:1,sweep:0,sweepAmp:0,sweepPhase:0,con:1,conEff:1,csweep:0,csAmp:0,csPhase:0,theta:0,speed:6,playing:!reduce,wave:0,waveT:0,axis:0,carrier:1,carrierT:1,env:0,auto:!reduce,idle:99};
+const S={stereo:0,depth:0.4,swap:false,scene:'grove',spread:0,sigma:1,sf:1,sfEff:1,sweep:0,sweepAmp:0,sweepPhase:0,con:1,conEff:1,csweep:0,csAmp:0,csPhase:0,theta:0,speed:6,playing:!reduce,wave:0,waveT:0,axis:0,carrier:1,carrierT:1,env:0,auto:!reduce,idle:99};
 let W=1,Hh=1,scale=Math.min(window.devicePixelRatio||1,2),dockShift=0;
 const dock=document.getElementById('dock');
 function resize(){
@@ -678,6 +696,15 @@ function setScene(name,quiet){
 for(const el of document.querySelectorAll('input[name=scene]'))el.addEventListener('change',e=>{setScene(e.target.value);});
 window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if(SC[h]&&h!==S.scene)setScene(h,true);});
 setScene(location.hash==='#gabor'?'gabor':'grove',true);
+// anaglyph: each eye's view is reduced to luminance and written to that eye's colour channels
+const EYES={1:['blue','green'],2:['red','cyan']};
+function stereoUI(){
+  const on=S.stereo>0;$('depthRow').hidden=!on;$('swapWrap').hidden=!on;
+  if(on){const n=EYES[S.stereo],a=S.swap?n[1]:n[0],b=S.swap?n[0]:n[1];$('swapText').textContent='Swap eyes (left '+a+', right '+b+')';}
+}
+for(const el of document.querySelectorAll('input[name=stereo]'))el.addEventListener('change',e=>{S.stereo=+e.target.value;stereoUI();});
+$('depth').addEventListener('input',e=>{S.depth=+e.target.value/100;$('depthOut').textContent=e.target.value+'%';});
+$('swap').addEventListener('change',e=>{S.swap=e.target.checked;stereoUI();});
 $('carriers').addEventListener('change',e=>{S.carrierT=e.target.checked?1:0;});
 $('env').addEventListener('change',e=>{S.env=e.target.checked?1:0;});
 $('hide').addEventListener('click',()=>{dock.classList.add('min');$('moreRow').hidden=false;});
@@ -720,13 +747,30 @@ function draw(t){
   if(isG)sizeHDR(W,Hh);
   const hdr=isG&&HDR.ok;
   gl.bindFramebuffer(gl.FRAMEBUFFER,hdr?HDR.fbo:null);
-  gl.viewport(0,0,W,Hh);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
+  // channel masks per eye [left,right]; unused channels are held at zero
+  const st=S.stereo,MASK=st===1?[[0,0,1],[0,1,0]]:[[1,0,0],[0,1,1]];
+  if(S.swap)MASK.reverse();
+  const bg=hdr?0.5:(st?(isG?0.5:0.13):0),used=st?[MASK[0][0]|MASK[1][0],MASK[0][1]|MASK[1][1],MASK[0][2]|MASK[1][2]]:[1,1,1];
+  gl.viewport(0,0,W,Hh);gl.colorMask(true,true,true,true);
+  gl.clearColor(bg*used[0],bg*used[1],bg*used[2],(hdr||st)?1:0);gl.clear(gl.COLOR_BUFFER_BIT);
   const portrait=Hh>W;
   gl.uniform3f(U.uCamPos,pos[0],pos[1],pos[2]);gl.uniform3f(U.uR,rt[0],rt[1],rt[2]);gl.uniform3f(U.uU,upv[0],upv[1],upv[2]);gl.uniform3f(U.uF,fw[0],fw[1],fw[2]);
-  gl.uniform2f(U.uViewport,W,Hh);gl.uniform2f(U.uOffset,0,portrait?dockShift*0.9:dockShift*0.45);
-  gl.uniform1f(U.uFocal,0.5*Math.min(Hh,W*1.45)/Math.tan(24*Math.PI/180));
+  gl.uniform2f(U.uViewport,W,Hh);const yoff=portrait?dockShift*0.9:dockShift*0.45;
+  const focal=0.5*Math.min(Hh,W*1.45)/Math.tan(24*Math.PI/180);gl.uniform1f(U.uFocal,focal);gl.uniform1f(U.uGray,st?1:0);
   gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff);gl.uniform1f(U.uContrast,S.conEff);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,isG?0:0.10);
-  gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,vis);
+  if(!st){gl.uniform2f(U.uOffset,0,yoff);gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,vis);}
+  else{
+    // off-axis stereo pair: eyes sit either side of the camera, frusta sheared so the orbit target has zero disparity
+    const dcam=len(sub3(cam.target,pos)),sep=dcam*S.depth/12,shift=focal*sep/(dcam*W);
+    for(let e=0;e<2;e++){
+      const sg=e===0?-1:1,m=MASK[e];
+      gl.colorMask(!!m[0],!!m[1],!!m[2],false);
+      gl.uniform3f(U.uCamPos,pos[0]+rt[0]*sg*sep/2,pos[1]+rt[1]*sg*sep/2,pos[2]+rt[2]*sg*sep/2);
+      gl.uniform2f(U.uOffset,sg*shift,yoff);
+      gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,vis);
+    }
+    gl.colorMask(true,true,true,true);
+  }
   if(hdr){
     gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.disable(gl.BLEND);gl.useProgram(blit);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);

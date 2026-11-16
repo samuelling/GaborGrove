@@ -20,6 +20,7 @@ Open `index.html` in a browser. It is a single self-contained file with no build
 - **Contrast** — carrier contrast, 1% to 100% on a log axis. In the grove this is texture contrast; object colour and shading stay.
 - **Contrast sweep** — log-sinusoid between the slider value and a 1% floor.
 - **Pull apart** (Gabor of Gabors) — spreads the small splats out so each is visible.
+- **3D** — anaglyph stereo for blue/green or red/cyan glasses, with a depth slider and an eye swap. Each eye's view is reduced to luminance and written to that eye's colour channels; the two views use off-axis frusta with zero disparity at the orbit target.
 - **Carriers on** — switch off to see the same splats as plain Gaussians.
 - **Rotate envelopes too** — rotates the Gaussian envelopes along with the carriers.
 
