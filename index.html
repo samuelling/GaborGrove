@@ -135,12 +135,12 @@ legend{float:left;padding:0;margin-right:8px;font-size:11px;color:var(--dim)}
       <input id="sweep" type="range" min="0" max="100" step="1" value="0">
       <output id="sweepOut" for="sweep">off</output>
     </div>
-    <div class="speed" id="conRow" hidden>
+    <div class="speed" id="conRow">
       <label for="con">Contrast</label>
       <input id="con" type="range" min="0" max="100" step="1" value="100">
       <output id="conOut" for="con">100%</output>
     </div>
-    <div class="speed" id="csRow" hidden>
+    <div class="speed" id="csRow">
       <label for="csweep">Contrast sweep</label>
       <input id="csweep" type="range" min="0" max="100" step="1" value="0">
       <output id="csweepOut" for="csweep">off</output>
@@ -670,7 +670,7 @@ function setScene(name,quiet){
   $('axisSurface').checked=S.axis===0;$('axisWorld').checked=S.axis===1;
   $('tabGrove').checked=name==='grove';$('tabGabor').checked=name==='gabor';
   document.body.classList.toggle('gabor',name==='gabor');
-  $('pullRow').hidden=$('conRow').hidden=$('csRow').hidden=name!=='gabor';
+  $('pullRow').hidden=name!=='gabor';
   $('count').textContent=SC[name].N.toLocaleString('en-US')+' Gabor splats · drag to orbit, pinch to zoom';
   canvas.setAttribute('aria-label',name==='gabor'?'One large 3D Gabor on a gray field, built from small 3D Gabor splats. Drag to orbit, pinch or scroll to zoom.':'A grove of mushrooms rendered with 3D Gabor splats. Drag to orbit, pinch or scroll to zoom.');
   if(!quiet){try{location.hash=name;}catch(err){}}
@@ -725,7 +725,7 @@ function draw(t){
   gl.uniform3f(U.uCamPos,pos[0],pos[1],pos[2]);gl.uniform3f(U.uR,rt[0],rt[1],rt[2]);gl.uniform3f(U.uU,upv[0],upv[1],upv[2]);gl.uniform3f(U.uF,fw[0],fw[1],fw[2]);
   gl.uniform2f(U.uViewport,W,Hh);gl.uniform2f(U.uOffset,0,portrait?dockShift*0.9:dockShift*0.45);
   gl.uniform1f(U.uFocal,0.5*Math.min(Hh,W*1.45)/Math.tan(24*Math.PI/180));
-  gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff);gl.uniform1f(U.uContrast,isG?S.conEff:1);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,isG?0:0.10);
+  gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff);gl.uniform1f(U.uContrast,S.conEff);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,isG?0:0.10);
   gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,vis);
   if(hdr){
     gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.disable(gl.BLEND);gl.useProgram(blit);

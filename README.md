@@ -17,8 +17,8 @@ Open `index.html` in a browser. It is a single self-contained file with no build
 - **Point spread** — scales every splat's Gaussian envelope (0.33× to 3×).
 - **Spatial freq** — scales every carrier's frequency (0.25× to 4×).
 - **SF sweep** — oscillates spatial frequency one octave either side of the slider value.
-- **Contrast** (Gabor of Gabors) — carrier contrast, 1% to 100% on a log axis.
-- **Contrast sweep** (Gabor of Gabors) — log-sinusoid between the slider value and a 1% floor.
+- **Contrast** — carrier contrast, 1% to 100% on a log axis. In the grove this is texture contrast; object colour and shading stay.
+- **Contrast sweep** — log-sinusoid between the slider value and a 1% floor.
 - **Pull apart** (Gabor of Gabors) — spreads the small splats out so each is visible.
 - **Carriers on** — switch off to see the same splats as plain Gaussians.
 - **Rotate envelopes too** — rotates the Gaussian envelopes along with the carriers.
