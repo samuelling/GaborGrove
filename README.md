@@ -17,6 +17,8 @@ Open `index.html` in a browser. It is a single self-contained file with no build
 - **Point spread** — scales every splat's Gaussian envelope (0.33× to 3×).
 - **Spatial freq** — scales every carrier's frequency (0.25× to 4×).
 - **SF sweep** — oscillates spatial frequency one octave either side of the slider value.
+- **Contrast** (Gabor of Gabors) — carrier contrast, 1% to 100% on a log axis.
+- **Contrast sweep** (Gabor of Gabors) — log-sinusoid between the slider value and a 1% floor.
 - **Pull apart** (Gabor of Gabors) — spreads the small splats out so each is visible.
 - **Carriers on** — switch off to see the same splats as plain Gaussians.
 - **Rotate envelopes too** — rotates the Gaussian envelopes along with the carriers.
@@ -29,3 +31,5 @@ Each splat's covariance is expressed in a frame whose third axis is the viewing 
 - contrast attenuation `exp(-½ k_z² σ²_{z|u})`, where `σ²_{z|u} = Σ_zz − Σ_zu Σ_uu⁻¹ Σ_uz`
 
 So stripes fade as the carrier tips toward the line of sight. Carriers above the pixel Nyquist rate are faded out as well. Splats are depth-sorted on the CPU each frame and alpha-composited back to front.
+
+The Gabor of Gabors tab accumulates into a 16-bit float buffer as linear luminance around a mean of 0.5, then resolves once to sRGB with dither. This keeps low contrasts free of 8-bit rounding mottle. It falls back to direct 8-bit compositing if float render targets are unavailable.

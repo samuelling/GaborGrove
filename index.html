@@ -35,6 +35,7 @@ header{position:fixed;top:0;left:0;padding:14px 16px;pointer-events:none;display
 h1{font-family:var(--display);font-style:italic;font-weight:500;font-size:26px;line-height:1.05;margin:0;letter-spacing:.005em}
 .tabs{pointer-events:auto;align-self:flex-start;margin-top:10px;background:var(--panel);text-shadow:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 body.gabor #stage{background:rgb(128,128,128)}
+body.gabor.lin #stage{background:rgb(188,188,188)}
 body.gabor header{text-shadow:none}
 body.gabor h1{color:#0b1118}
 body.gabor header p{color:rgba(11,17,24,.74)}
@@ -51,7 +52,7 @@ button:hover{border-color:var(--dim)}
 #play{min-width:78px;background:var(--cap);border-color:var(--cap);color:#1a0b06;font-weight:500}
 .speed{flex:1 1 180px;display:flex;align-items:center;gap:10px;min-width:160px}
 .more .speed{flex-basis:260px}
-.speed label{font-size:11px;color:var(--dim);flex:none;min-width:68px}
+.speed label{font-size:11px;color:var(--dim);flex:none;min-width:86px}
 .speed output{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;min-width:48px;text-align:right}
 input[type=range]{flex:1;min-width:0;accent-color:var(--glow);height:28px}
 fieldset{border:0;margin:0;padding:0;display:flex;align-items:center;gap:8px;min-width:0}
@@ -133,6 +134,16 @@ legend{float:left;padding:0;margin-right:8px;font-size:11px;color:var(--dim)}
       <label for="sweep">SF sweep</label>
       <input id="sweep" type="range" min="0" max="100" step="1" value="0">
       <output id="sweepOut" for="sweep">off</output>
+    </div>
+    <div class="speed" id="conRow" hidden>
+      <label for="con">Contrast</label>
+      <input id="con" type="range" min="0" max="100" step="1" value="100">
+      <output id="conOut" for="con">100%</output>
+    </div>
+    <div class="speed" id="csRow" hidden>
+      <label for="csweep">Contrast sweep</label>
+      <input id="csweep" type="range" min="0" max="100" step="1" value="0">
+      <output id="csweepOut" for="csweep">off</output>
     </div>
     <div class="speed" id="pullRow" hidden>
       <label for="pull">Pull apart</label>
@@ -452,7 +463,7 @@ precision highp float;precision highp int;
 uniform highp sampler2D uData;
 uniform vec3 uCamPos,uR,uU,uF,uAxis,uFog;
 uniform vec2 uViewport,uOffset;
-uniform float uFocal,uTime,uTheta,uWave,uCarrier,uEnv,uAxisMode,uSpread,uFogK,uSigma,uSF;
+uniform float uFocal,uTime,uTheta,uWave,uCarrier,uEnv,uAxisMode,uSpread,uFogK,uSigma,uSF,uContrast;
 in float aIndex;
 out vec2 vUV;out vec2 vKq;out float vPhase;out float vAmp;out vec3 vC1;out vec3 vC2;out vec4 vPar;out float vR2;
 vec3 rot(vec3 v,vec3 a,float c,float s){return v*c+cross(a,v)*s+a*dot(a,v)*(1.0-c);}
@@ -518,7 +529,7 @@ void main(){
   vec2 px=ctr+(ax1*corner.x+ax2*corner.y)*R;
   gl_Position=vec4(px/(0.5*uViewport)+uOffset,0.0,1.0);
   vUV=corner*R;vR2=R*R;
-  vKq=vec2(dot(ks,ax1),dot(ks,ax2));vPhase=ph;vAmp=att*uCarrier;
+  vKq=vec2(dot(ks,ax1),dot(ks,ax2));vPhase=ph;vAmp=att*uCarrier*uContrast;
   float add=step(0.5,flag);
   float fg=1.0-exp(-max(pc.z-3.2,0.0)*uFogK);
   vC1=mix(mix(c1,uFog,fg),c1*(1.0-fg),add);
@@ -544,9 +555,47 @@ const prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,VS));gl.a
 gl.bindAttribLocation(prog,0,'aIndex');gl.linkProgram(prog);
 if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog));
 gl.useProgram(prog);
-const U={};for(const n of['uData','uCamPos','uR','uU','uF','uAxis','uFog','uViewport','uOffset','uFocal','uTime','uTheta','uWave','uCarrier','uEnv','uAxisMode','uSpread','uFogK','uSigma','uSF'])U[n]=gl.getUniformLocation(prog,n);
+const U={};for(const n of['uData','uCamPos','uR','uU','uF','uAxis','uFog','uViewport','uOffset','uFocal','uTime','uTheta','uWave','uCarrier','uEnv','uAxisMode','uSpread','uFogK','uSigma','uSF','uContrast'])U[n]=gl.getUniformLocation(prog,n);
 
 gl.activeTexture(gl.TEXTURE0);gl.uniform1i(U.uData,0);
+
+/* Gabor tab: accumulate in a 16-bit float target as linear luminance, then resolve once to sRGB with dither.
+   Compositing dozens of faint splats straight into 8 bits leaves rounding mottle that swamps low contrasts. */
+const HDR={ok:false,fbo:null,tex:null,w:0,h:0};
+const BVS=`#version 300 es
+void main(){gl_Position=vec4(vec2(float(gl_VertexID&1),float((gl_VertexID>>1)&1))*2.0-1.0,0.0,1.0);}`;
+const BFS=`#version 300 es
+precision highp float;
+uniform highp sampler2D uSrc;
+out vec4 o;
+vec3 enc(vec3 c){c=clamp(c,0.0,1.0);return mix(c*12.92,1.055*pow(c,vec3(1.0/2.4))-0.055,step(vec3(0.0031308),c));}
+void main(){
+  vec4 c=texelFetch(uSrc,ivec2(gl_FragCoord.xy),0);
+  vec3 lin=c.rgb+(1.0-c.a)*0.5;
+  float d=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(0.06711056,0.00583715))))-0.5;
+  o=vec4(enc(lin)+d/255.0,1.0);
+}`;
+let blit=null;
+if(gl.getExtension('EXT_color_buffer_float')||gl.getExtension('EXT_color_buffer_half_float')){
+  try{
+    blit=gl.createProgram();gl.attachShader(blit,sh(gl.VERTEX_SHADER,BVS));gl.attachShader(blit,sh(gl.FRAGMENT_SHADER,BFS));gl.linkProgram(blit);
+    if(!gl.getProgramParameter(blit,gl.LINK_STATUS))throw new Error('blit link');
+    gl.useProgram(blit);gl.uniform1i(gl.getUniformLocation(blit,'uSrc'),1);gl.useProgram(prog);
+    HDR.fbo=gl.createFramebuffer();HDR.tex=gl.createTexture();HDR.ok=true;
+  }catch(err){HDR.ok=false;}
+}
+function sizeHDR(w,h){
+  if(!HDR.ok||(HDR.w===w&&HDR.h===h))return;
+  gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,HDR.tex);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA16F,w,h,0,gl.RGBA,gl.HALF_FLOAT,null);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,HDR.fbo);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,HDR.tex,0);
+  if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)HDR.ok=false;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.activeTexture(gl.TEXTURE0);
+  HDR.w=w;HDR.h=h;
+  document.body.classList.toggle('lin',HDR.ok);
+}
 const vao=gl.createVertexArray();gl.bindVertexArray(vao);
 const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,Math.max(SC.grove.N,SC.gabor.N)*4,gl.DYNAMIC_DRAW);
 gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,1,gl.FLOAT,false,0,0);gl.vertexAttribDivisor(0,1);
@@ -570,7 +619,7 @@ const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').m
 const cams={grove:{yaw:-0.5,pitch:-0.03,dist:6.8,target:[0.1,1.3,0],pmin:-0.16,pmax:1.35,dmax:13},
   gabor:{yaw:0,pitch:0,dist:10,target:[0,0,0],pmin:-1.45,pmax:1.45,dmax:24}};
 let cam=cams.grove;const axisBy={grove:0,gabor:1};
-const S={scene:'grove',spread:0,sigma:1,sf:1,sfEff:1,sweep:0,sweepAmp:0,sweepPhase:0,theta:0,speed:6,playing:!reduce,wave:0,waveT:0,axis:0,carrier:1,carrierT:1,env:0,auto:!reduce,idle:99};
+const S={scene:'grove',spread:0,sigma:1,sf:1,sfEff:1,sweep:0,sweepAmp:0,sweepPhase:0,con:1,conEff:1,csweep:0,csAmp:0,csPhase:0,theta:0,speed:6,playing:!reduce,wave:0,waveT:0,axis:0,carrier:1,carrierT:1,env:0,auto:!reduce,idle:99};
 let W=1,Hh=1,scale=Math.min(window.devicePixelRatio||1,2),dockShift=0;
 const dock=document.getElementById('dock');
 function resize(){
@@ -610,6 +659,10 @@ for(const el of document.querySelectorAll('input[name=axis]'))el.addEventListene
 $('psf').addEventListener('input',e=>{S.sigma=Math.pow(3,+e.target.value/100);$('psfOut').textContent=S.sigma.toFixed(2)+'×';});
 $('sf').addEventListener('input',e=>{S.sf=Math.pow(4,+e.target.value/100);});
 $('sweep').addEventListener('input',e=>{const v=+e.target.value;S.sweep=v===0?0:(1/60)*Math.pow(20,(v-1)/99);$('sweepOut').textContent=v===0?'off':Math.round(1/S.sweep)+' s';});
+const sweepRate=v=>v===0?0:(1/60)*Math.pow(20,(v-1)/99);
+// contrast slider is logarithmic: 1% to 100%
+$('con').addEventListener('input',e=>{S.con=Math.pow(10,-2+2*(+e.target.value)/100);});
+$('csweep').addEventListener('input',e=>{const v=+e.target.value;S.csweep=sweepRate(v);if(v===0)S.csPhase=0;$('csweepOut').textContent=v===0?'off':Math.round(1/S.csweep)+' s';});
 $('pull').addEventListener('input',e=>{S.spread=+e.target.value/100;$('pullOut').textContent=e.target.value+'%';});
 function setScene(name,quiet){
   if(!SC[name])name='grove';
@@ -617,7 +670,7 @@ function setScene(name,quiet){
   $('axisSurface').checked=S.axis===0;$('axisWorld').checked=S.axis===1;
   $('tabGrove').checked=name==='grove';$('tabGabor').checked=name==='gabor';
   document.body.classList.toggle('gabor',name==='gabor');
-  $('pullRow').hidden=name!=='gabor';
+  $('pullRow').hidden=$('conRow').hidden=$('csRow').hidden=name!=='gabor';
   $('count').textContent=SC[name].N.toLocaleString('en-US')+' Gabor splats · drag to orbit, pinch to zoom';
   canvas.setAttribute('aria-label',name==='gabor'?'One large 3D Gabor on a gray field, built from small 3D Gabor splats. Drag to orbit, pinch or scroll to zoom.':'A grove of mushrooms rendered with 3D Gabor splats. Drag to orbit, pinch or scroll to zoom.');
   if(!quiet){try{location.hash=name;}catch(err){}}
@@ -643,6 +696,11 @@ function frame(now){
   S.sweepAmp+=((S.sweep>0?1:0)-S.sweepAmp)*Math.min(1,dt*2.5);
   S.sfEff=S.sf*Math.pow(2,S.sweepAmp*Math.sin(S.sweepPhase));
   $('sfOut').textContent=S.sfEff.toFixed(2)+'×';
+  // contrast sweep: log-sinusoid between the slider value (peak) and a 1% floor
+  if(S.playing)S.csPhase+=TAU*S.csweep*dt;
+  S.csAmp+=((S.csweep>0?1:0)-S.csAmp)*Math.min(1,dt*2.5);
+  S.conEff=S.con>0.01?S.con*Math.pow(0.01/S.con,S.csAmp*(0.5-0.5*Math.cos(S.csPhase))):S.con;
+  const cp100=S.conEff*100;$('conOut').textContent=(cp100<10?cp100.toFixed(1):cp100.toFixed(0))+'%';
   S.wave+=(S.waveT-S.wave)*Math.min(1,dt*3);S.carrier+=(S.carrierT-S.carrier)*Math.min(1,dt*4);
   S.idle+=dt;if(S.auto&&S.idle>2.5&&ptrs.size===0)cam.yaw+=S.scene==='gabor'?0.15*Math.sin((S.idle-2.5)*0.3)*dt:0.045*dt;
   draw(now/1000);
@@ -659,15 +717,23 @@ function draw(t){
   const vis=sortSplats(sc,pos,fw,1+spread*5);
   gl.bindTexture(gl.TEXTURE_2D,sc.tex);
   gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferSubData(gl.ARRAY_BUFFER,0,sc.order,0,vis);
+  if(isG)sizeHDR(W,Hh);
+  const hdr=isG&&HDR.ok;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,hdr?HDR.fbo:null);
   gl.viewport(0,0,W,Hh);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
   const portrait=Hh>W;
   gl.uniform3f(U.uCamPos,pos[0],pos[1],pos[2]);gl.uniform3f(U.uR,rt[0],rt[1],rt[2]);gl.uniform3f(U.uU,upv[0],upv[1],upv[2]);gl.uniform3f(U.uF,fw[0],fw[1],fw[2]);
   gl.uniform2f(U.uViewport,W,Hh);gl.uniform2f(U.uOffset,0,portrait?dockShift*0.9:dockShift*0.45);
   gl.uniform1f(U.uFocal,0.5*Math.min(Hh,W*1.45)/Math.tan(24*Math.PI/180));
-  gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,isG?0:0.10);
+  gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff);gl.uniform1f(U.uContrast,isG?S.conEff:1);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,isG?0:0.10);
   gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,vis);
+  if(hdr){
+    gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.disable(gl.BLEND);gl.useProgram(blit);
+    gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    gl.enable(gl.BLEND);gl.useProgram(prog);
+  }
 }
-window.GROVE={S:S,cams:cams,get cam(){return cam;},get count(){return SC[S.scene].N;},setScene:setScene};
+window.GROVE={HDR:HDR,S:S,cams:cams,get cam(){return cam;},get count(){return SC[S.scene].N;},setScene:setScene};
 requestAnimationFrame(frame);
 })();
 </script>
