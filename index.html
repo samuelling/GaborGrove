@@ -68,6 +68,17 @@ legend{float:left;padding:0;margin-right:8px;font-size:11px;color:var(--dim)}
 #dock.min .more{display:none}
 :focus-visible{outline:2px solid var(--glow);outline-offset:2px}
 .seg input:focus-visible + span{outline:2px solid var(--glow);outline-offset:2px}
+#vrui{display:none}
+body.vr header,body.vr #dock{display:none}
+body.vr #vrui{display:block}
+body.vr #stage{background:#060b10}
+body.vr #gl{cursor:default}
+#vrExit{position:fixed;top:6px;left:50%;transform:translateX(-50%);padding:4px 12px;min-height:28px;font-size:11px;background:rgba(9,18,27,.7);color:var(--cream);opacity:.7;z-index:3}
+#vrTick{position:fixed;left:50%;bottom:0;width:2px;height:26px;margin-left:-1px;background:rgba(241,227,196,.4)}
+#vrHint{position:fixed;left:50%;bottom:36px;transform:translateX(-50%);margin:0;padding:6px 14px;border-radius:999px;background:rgba(9,18,27,.78);color:var(--cream);font-size:12px;text-align:center;max-width:92%;transition:opacity .6s;pointer-events:none}
+#vrTurn{display:none;position:fixed;inset:0;background:var(--night);color:var(--cream);align-items:center;justify-content:center;text-align:center;padding:24px;font-size:16px;z-index:2}
+@media (orientation:portrait){body.vr #vrTurn{display:flex}}
+#vrEnter{background:var(--glow);border-color:var(--glow);color:#06201b;font-weight:500}
 #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:15px}
 @media (max-width:520px){
   h1{font-size:22px}
@@ -92,11 +103,19 @@ legend{float:left;padding:0;margin-right:8px;font-size:11px;color:var(--dim)}
 </header>
 <div id="err">This demo needs WebGL 2, which this browser did not provide.</div>
 
+<div id="vrui">
+  <button id="vrExit" type="button">Exit VR</button>
+  <div id="vrTick"></div>
+  <p id="vrHint"></p>
+  <div id="vrTurn">Turn your phone sideways, then place it in the headset.</div>
+</div>
+
 <section id="dock" aria-label="Carrier rotation controls">
   <div class="row">
     <canvas id="dial" width="88" height="88" aria-hidden="true"></canvas>
     <div class="readout"><span>Carrier angle</span><output id="theta">0°</output></div>
     <button id="play" type="button" aria-pressed="true">Pause</button>
+    <button id="vrEnter" type="button" aria-label="Enter VR: split-screen view for a phone headset">VR</button>
     <div class="speed">
       <label for="speed">Speed</label>
       <input id="speed" type="range" min="0" max="30" step="0.5" value="6">
@@ -165,6 +184,14 @@ legend{float:left;padding:0;margin-right:8px;font-size:11px;color:var(--dim)}
       <input id="depth" type="range" min="0" max="100" step="1" value="40">
       <output id="depthOut" for="depth">40%</output>
     </div>
+  </div>
+  <div class="row more">
+    <div class="speed">
+      <label for="lens">Lens correction</label>
+      <input id="lens" type="range" min="0" max="100" step="1" value="50">
+      <output id="lensOut" for="lens">50%</output>
+    </div>
+    <label class="check"><input type="checkbox" id="drift">Drift forward in VR</label>
   </div>
   <div class="row more">
     <label class="check"><input type="checkbox" id="carriers" checked>Carriers on</label>
@@ -252,6 +279,7 @@ function ground(x,z){const r=Math.hypot(x,z);
 function groundN(x,z){const e=0.05;return norm([ground(x-e,z)-ground(x+e,z),2*e,ground(x,z-e)-ground(x,z+e)]);}
 
 /* ---------- mushrooms ---------- */
+const OBST=[];
 const PAL={
   scarlet:{top:[0.78,0.10,0.07],rim:[1.0,0.30,0.14],dark:0.5,style:'striate',capW:0.75,warts:true,skirt:true,gill1:[1.0,0.90,0.72],gill2:[0.30,0.16,0.10],stem1:[0.98,0.93,0.80],stem2:[0.62,0.52,0.40],dome:0.62,curl:1.78},
   amber:{top:[0.62,0.30,0.08],rim:[1.0,0.66,0.22],dark:0.45,style:'zoned',capW:0.8,gill1:[0.98,0.84,0.58],gill2:[0.34,0.18,0.07],stem1:[0.92,0.82,0.62],stem2:[0.55,0.42,0.28],dome:0.48,curl:1.7},
@@ -269,6 +297,7 @@ function mushroom(o){
   const rs=R*(o.stem||0.17),sp=R*0.09*(o.detail||1);
   const thin=Math.max(0.0025,sp*0.04);
   const sh=(c,p,n,x)=>em?mul(c,(x&&x.j)||1):shade(c,p,n,x);
+  if(!em)OBST.push([o.x,o.z,rs*1.7+0.2]);
   const ringDir=th=>{const c=Math.cos(th),s=Math.sin(th);return{e:add3(mul(U,c),mul(V,s)),t:add3(mul(U,-s),mul(V,c))};};
   // cap: an ellipsoidal dome whose rim curls under
   const Ns=2*Math.round(R*(o.striae||24)+6);
@@ -389,6 +418,7 @@ for(const m of minis)mushroom(m);
 (function buildLog(){
   const ax=norm(sub3(LOG.b,LOG.a)),L=len(sub3(LOG.b,LOG.a)),U=norm(cross(ax,[0,1,0])),V=cross(U,ax),r=LOG.r;
   const sp=0.105,rows=Math.ceil(L/sp),nt=Math.round(TAU*r/sp),Nb=20;
+  for(let i=0;i<=5;i++){const q=mix3(LOG.a,LOG.b,i/5);OBST.push([q[0],q[2],r+0.25]);}
   for(let i=0;i<rows;i++){
     const cen=add3(LOG.a,mul(ax,(i+0.5)/rows*L)),th0=rnd()*TAU;
     for(let j=0;j<nt;j++){
@@ -414,7 +444,7 @@ for(const m of minis)mushroom(m);
 (function buildTrees(){
   const spots=[[5.9,0.5],[4.6,-4.6],[0.6,-6.6],[-4.4,-5.0],[-6.4,-0.6],[-5.0,4.4],[-0.4,6.8],[4.4,5.4]];
   for(const s of spots){
-    const rt=rr(0.36,0.58),by=ground(s[0],s[1])-0.1,Nb=Math.round(TAU*rt/0.14),Ht=9;
+    const rt=rr(0.36,0.58),by=ground(s[0],s[1])-0.1;OBST.push([s[0],s[1],0.95]);const Nb=Math.round(TAU*rt/0.14),Ht=9;
     for(let y=0.12;y<Ht;y+=0.27){
       const r=rt*(1+0.9*Math.exp(-y*1.7))*(1-0.02*y),nt=Math.max(8,Math.round(TAU*r/0.25)),th0=rnd()*TAU;
       for(let j=0;j<nt;j++){const th=(th0+j*TAU/nt)%TAU,e=[Math.cos(th),0,Math.sin(th)],tt=[-Math.sin(th),0,Math.cos(th)];
@@ -585,20 +615,36 @@ void main(){gl_Position=vec4(vec2(float(gl_VertexID&1),float((gl_VertexID>>1)&1)
 const BFS=`#version 300 es
 precision highp float;
 uniform highp sampler2D uSrc;
+uniform vec4 uVR;   // x: lens correction on, y: half-screen width, z: display focal, w: source focal (all in pixels)
+uniform vec2 uK,uSize;
+uniform float uLin;
 out vec4 o;
 vec3 enc(vec3 c){c=clamp(c,0.0,1.0);return mix(c*12.92,1.055*pow(c,vec3(1.0/2.4))-0.055,step(vec3(0.0031308),c));}
 void main(){
-  vec4 c=texelFetch(uSrc,ivec2(gl_FragCoord.xy),0);
-  vec3 lin=c.rgb;
+  vec3 c;
+  if(uVR.x<0.5)c=texelFetch(uSrc,ivec2(gl_FragCoord.xy),0).rgb;
+  else{
+    // the headset lens pincushions the display, so show each point's wider-angle content: a barrel pre-distortion
+    float e=step(uVR.y,gl_FragCoord.x);
+    vec2 ctr=vec2(uVR.y*(0.5+e),0.5*uSize.y);
+    vec2 rd=(gl_FragCoord.xy-ctr)/uVR.z;float r2=dot(rd,rd);
+    vec2 sp=rd*(1.0+uK.x*r2+uK.y*r2*r2)*uVR.w+ctr;
+    if(abs(sp.x-ctr.x)>0.5*uVR.y-1.0||sp.y<1.0||sp.y>uSize.y-1.0){o=vec4(0.0,0.0,0.0,1.0);return;}
+    c=texture(uSrc,sp/uSize).rgb;
+  }
+  if(uLin>0.5)c=enc(c);
   float d=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(0.06711056,0.00583715))))-0.5;
-  o=vec4(enc(lin)+d/255.0,1.0);
+  o=vec4(c+d/255.0,1.0);
 }`;
+const BU={};
 let blit=null;
 if(gl.getExtension('EXT_color_buffer_float')||gl.getExtension('EXT_color_buffer_half_float')){
   try{
     blit=gl.createProgram();gl.attachShader(blit,sh(gl.VERTEX_SHADER,BVS));gl.attachShader(blit,sh(gl.FRAGMENT_SHADER,BFS));gl.linkProgram(blit);
     if(!gl.getProgramParameter(blit,gl.LINK_STATUS))throw new Error('blit link');
-    gl.useProgram(blit);gl.uniform1i(gl.getUniformLocation(blit,'uSrc'),1);gl.useProgram(prog);
+    gl.useProgram(blit);gl.uniform1i(gl.getUniformLocation(blit,'uSrc'),1);
+    for(const n of['uVR','uK','uSize','uLin'])BU[n]=gl.getUniformLocation(blit,n);
+    gl.useProgram(prog);
     HDR.fbo=gl.createFramebuffer();HDR.tex=gl.createTexture();HDR.ok=true;
   }catch(err){HDR.ok=false;}
 }
@@ -606,7 +652,7 @@ function sizeHDR(w,h){
   if(!HDR.ok||(HDR.w===w&&HDR.h===h))return;
   gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,HDR.tex);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA16F,w,h,0,gl.RGBA,gl.HALF_FLOAT,null);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.bindFramebuffer(gl.FRAMEBUFFER,HDR.fbo);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,HDR.tex,0);
   if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)HDR.ok=false;
@@ -637,6 +683,53 @@ const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').m
 const cams={grove:{yaw:-0.5,pitch:-0.03,dist:6.8,target:[0.1,1.3,0],pmin:-0.16,pmax:1.35,dmax:13},
   gabor:{yaw:0,pitch:0,dist:10,target:[0,0,0],pmin:-1.45,pmax:1.45,dmax:24}};
 let cam=cams.grove;const axisBy={grove:0,gabor:1};
+/* ---------- phone VR: side-by-side stereo, head tracking from the device orientation sensor ---------- */
+const VR={on:false,q:null,got:false,need:true,want:0,yawOff:0,pitch:0,moving:false,drift:false,lens:0.5,fs:false,wake:null,tap:null,t0:0,warned:false,
+  eye:1.25,ipd:0.064,pos:{grove:[-0.6,0,4.6],gabor:[0,0,6.5]}};
+const qmul=(a,b)=>[a[3]*b[0]+a[0]*b[3]+a[1]*b[2]-a[2]*b[1],a[3]*b[1]-a[0]*b[2]+a[1]*b[3]+a[2]*b[0],a[3]*b[2]+a[0]*b[1]-a[1]*b[0]+a[2]*b[3],a[3]*b[3]-a[0]*b[0]-a[1]*b[1]-a[2]*b[2]];
+function qrot(q,v){const u=[q[0],q[1],q[2]],t=mul(cross(u,v),2);return add3(add3(v,mul(t,q[3])),cross(u,t));}
+// W3C device angles to a camera quaternion (y up, camera looks out of the back of the phone)
+function quatDevice(alpha,beta,gamma,orient){
+  const c1=Math.cos(beta/2),s1=Math.sin(beta/2),c2=Math.cos(alpha/2),s2=Math.sin(alpha/2),c3=Math.cos(-gamma/2),s3=Math.sin(-gamma/2);
+  let q=[s1*c2*c3+c1*s2*s3,c1*s2*c3-s1*c2*s3,c1*c2*s3-s1*s2*c3,c1*c2*c3+s1*s2*s3];
+  q=qmul(q,[-Math.SQRT1_2,0,0,Math.SQRT1_2]);
+  return qmul(q,[0,0,Math.sin(-orient/2),Math.cos(-orient/2)]);
+}
+function onOrient(e){
+  if(e.alpha===null||e.beta===null||e.gamma===null)return;
+  const d=Math.PI/180,o=((window.screen&&screen.orientation&&screen.orientation.angle)||window.orientation||0)*d;
+  VR.q=quatDevice(e.alpha*d,e.beta*d,e.gamma*d,o);VR.got=true;
+  if(VR.need){const f=qrot(VR.q,[0,0,-1]);VR.yawOff=VR.want-Math.atan2(-f[0],-f[2]);VR.need=false;}
+}
+function vrHint(text){const h=document.getElementById('vrHint');h.textContent=text;h.style.opacity='1';clearTimeout(vrHint.t);vrHint.t=setTimeout(()=>{h.style.opacity='0';},7000);}
+function enterVR(){
+  const P=VR.pos[S.scene];
+  if(S.scene==='grove')P[1]=ground(P[0],P[2])+VR.eye;
+  VR.on=true;VR.q=null;VR.got=false;VR.need=true;VR.warned=false;VR.pitch=0;VR.moving=VR.drift;VR.t0=performance.now();
+  VR.want=Math.atan2(P[0]-(S.scene==='grove'?0.15:0),P[2]);VR.yawOff=VR.want;
+  document.body.classList.add('vr');
+  vrHint(S.scene==='grove'?'Tap to walk where you look. Tap again to stop.':'Tap to fly where you look. Tap again to stop.');
+  // both requests must start inside the click
+  let perm=null,fs=null;const el=document.documentElement;
+  try{if(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission)perm=DeviceOrientationEvent.requestPermission();}catch(err){}
+  try{if(el.requestFullscreen)fs=el.requestFullscreen({navigationUI:'hide'});}catch(err){}
+  if(perm)perm.catch(()=>{});
+  window.addEventListener('deviceorientation',onOrient);
+  if(fs)fs.then(()=>{VR.fs=true;try{const l=screen.orientation.lock('landscape');if(l)l.catch(()=>{});}catch(err){}}).catch(()=>{VR.fs=false;});
+  try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(w=>{VR.wake=w;}).catch(()=>{});}catch(err){}
+  resize();
+}
+function exitVR(){
+  if(!VR.on)return;
+  VR.on=false;VR.moving=false;document.body.classList.remove('vr');
+  window.removeEventListener('deviceorientation',onOrient);
+  try{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});}catch(err){}
+  try{screen.orientation.unlock();}catch(err){}
+  try{if(VR.wake){VR.wake.release();VR.wake=null;}}catch(err){}
+  VR.fs=false;S.idle=0;resize();
+}
+document.addEventListener('fullscreenchange',()=>{if(VR.on&&VR.fs&&!document.fullscreenElement)exitVR();});
+window.addEventListener('keydown',e=>{if(!VR.on)return;if(e.key===' '||e.key==='Enter'){VR.moving=!VR.moving;e.preventDefault();}else if(e.key==='Escape')exitVR();});
 const S={stereo:0,depth:0.4,swap:false,scene:'grove',spread:0,sigma:1,sf:1,sfEff:1,sweep:0,sweepAmp:0,sweepPhase:0,con:1,conEff:1,csweep:0,csAmp:0,csPhase:0,theta:0,speed:6,playing:!reduce,wave:0,waveT:0,axis:0,carrier:1,carrierT:1,env:0,auto:!reduce,idle:99};
 let W=1,Hh=1,scale=Math.min(window.devicePixelRatio||1,2),dockShift=0;
 const dock=document.getElementById('dock');
@@ -650,17 +743,24 @@ function resize(){
 new ResizeObserver(resize).observe(canvas);new ResizeObserver(resize).observe(dock);resize();
 
 const ptrs=new Map();let pinch=0;
-canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,[e.clientX,e.clientY]);S.idle=0;
+canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,[e.clientX,e.clientY]);S.idle=0;VR.tap={t:performance.now(),moved:0};
   if(ptrs.size===2){const v=[...ptrs.values()];pinch=Math.hypot(v[0][0]-v[1][0],v[0][1]-v[1][1]);}});
 canvas.addEventListener('pointermove',e=>{
   const p=ptrs.get(e.pointerId);if(!p)return;S.idle=0;
+  if(VR.on){
+    const dx=e.clientX-p[0],dy=e.clientY-p[1];
+    if(VR.tap)VR.tap.moved+=Math.abs(dx)+Math.abs(dy);
+    if(ptrs.size===1&&(!VR.tap||VR.tap.moved>8)){VR.yawOff+=dx*0.004;if(!VR.got)VR.pitch=clamp(VR.pitch+dy*0.004,-1.45,1.45);}
+    ptrs.set(e.pointerId,[e.clientX,e.clientY]);return;
+  }
   if(ptrs.size===1){cam.yaw-=(e.clientX-p[0])*0.0065;cam.pitch=clamp(cam.pitch+(e.clientY-p[1])*0.005,cam.pmin,cam.pmax);}
   ptrs.set(e.pointerId,[e.clientX,e.clientY]);
   if(ptrs.size===2){const v=[...ptrs.values()],d=Math.hypot(v[0][0]-v[1][0],v[0][1]-v[1][1]);if(pinch>0)cam.dist=clamp(cam.dist*pinch/d,1.6,cam.dmax);pinch=d;}
 });
-const up=e=>{ptrs.delete(e.pointerId);pinch=0;};
+const up=e=>{ptrs.delete(e.pointerId);pinch=0;
+  if(VR.on&&e.type==='pointerup'&&VR.tap&&VR.tap.moved<12&&performance.now()-VR.tap.t<450)VR.moving=!VR.moving;VR.tap=null;};
 canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
-canvas.addEventListener('wheel',e=>{e.preventDefault();cam.dist=clamp(cam.dist*Math.exp(e.deltaY*0.0012),1.6,cam.dmax);S.idle=0;},{passive:false});
+canvas.addEventListener('wheel',e=>{e.preventDefault();if(VR.on)return;cam.dist=clamp(cam.dist*Math.exp(e.deltaY*0.0012),1.6,cam.dmax);S.idle=0;},{passive:false});
 
 /* ---------- controls ---------- */
 const $=id=>document.getElementById(id);
@@ -705,6 +805,9 @@ function stereoUI(){
 for(const el of document.querySelectorAll('input[name=stereo]'))el.addEventListener('change',e=>{S.stereo=+e.target.value;stereoUI();});
 $('depth').addEventListener('input',e=>{S.depth=+e.target.value/100;$('depthOut').textContent=e.target.value+'%';});
 $('swap').addEventListener('change',e=>{S.swap=e.target.checked;stereoUI();});
+$('vrEnter').addEventListener('click',enterVR);$('vrExit').addEventListener('click',exitVR);
+$('lens').addEventListener('input',e=>{VR.lens=+e.target.value/100;$('lensOut').textContent=e.target.value+'%';});
+$('drift').addEventListener('change',e=>{VR.drift=e.target.checked;});
 $('carriers').addEventListener('change',e=>{S.carrierT=e.target.checked?1:0;});
 $('env').addEventListener('change',e=>{S.env=e.target.checked?1:0;});
 $('hide').addEventListener('click',()=>{dock.classList.add('min');$('moreRow').hidden=false;});
@@ -730,7 +833,7 @@ function frame(now){
   const cp100=S.conEff*100;$('conOut').textContent=(cp100<10?cp100.toFixed(1):cp100.toFixed(0))+'%';
   S.wave+=(S.waveT-S.wave)*Math.min(1,dt*3);S.carrier+=(S.carrierT-S.carrier)*Math.min(1,dt*4);
   S.idle+=dt;if(S.auto&&S.idle>2.5&&ptrs.size===0)cam.yaw+=S.scene==='gabor'?0.15*Math.sin((S.idle-2.5)*0.3)*dt:0.045*dt;
-  draw(now/1000);
+  if(VR.on)drawVR(now/1000,dt);else draw(now/1000);
   const deg=((S.theta*180/Math.PI)%360+360)%360;
   thetaOut.textContent=deg.toFixed(0)+'°';dial.style.transform='rotate('+deg.toFixed(1)+'deg)';
   requestAnimationFrame(frame);
@@ -773,11 +876,63 @@ function draw(t){
   }
   if(hdr){
     gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.disable(gl.BLEND);gl.useProgram(blit);
+    gl.uniform4f(BU.uVR,0,0,1,1);gl.uniform1f(BU.uLin,1);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     gl.enable(gl.BLEND);gl.useProgram(prog);
   }
 }
-window.GROVE={HDR:HDR,S:S,cams:cams,get cam(){return cam;},get count(){return SC[S.scene].N;},setScene:setScene};
+function drawVR(t,dt){
+  const sc=SC[S.scene],isG=S.scene==='gabor',spread=isG?S.spread:0,P=VR.pos[S.scene];
+  // head pose: sensor quaternion with a yaw offset, or drag-to-look when no sensor reports
+  let rt,upv,fw;
+  if(VR.q){const h=VR.yawOff/2,q=qmul([0,Math.sin(h),0,Math.cos(h)],VR.q);rt=qrot(q,[1,0,0]);upv=qrot(q,[0,1,0]);fw=qrot(q,[0,0,-1]);}
+  else{const y=VR.yawOff,pc=Math.cos(VR.pitch);fw=[-Math.sin(y)*pc,Math.sin(VR.pitch),-Math.cos(y)*pc];rt=norm(cross(fw,[0,1,0]));upv=cross(rt,fw);}
+  if(!VR.got&&!VR.warned&&performance.now()-VR.t0>1800){VR.warned=true;vrHint('No motion sensor data here. Drag to look, tap to move.');}
+  if(VR.moving){
+    if(isG){
+      for(let i=0;i<3;i++)P[i]+=fw[i]*0.9*dt;
+      const r=len(P);if(r>14)for(let i=0;i<3;i++)P[i]*=14/r;
+    }else{
+      const hl=Math.hypot(fw[0],fw[2])||1;P[0]+=fw[0]/hl*0.7*dt;P[2]+=fw[2]/hl*0.7*dt;
+      for(const o of OBST){const dx=P[0]-o[0],dz=P[2]-o[1],d=Math.hypot(dx,dz);if(d<o[2]&&d>1e-4){P[0]=o[0]+dx/d*o[2];P[2]=o[1]+dz/d*o[2];}}
+      const r=Math.hypot(P[0],P[2]);if(r>6.3){P[0]*=6.3/r;P[2]*=6.3/r;}
+    }
+  }
+  if(!isG)P[1]+=(ground(P[0],P[2])+VR.eye-P[1])*Math.min(1,dt*6);
+  const vis=sortSplats(sc,P,fw,1+spread*5);
+  gl.bindTexture(gl.TEXTURE_2D,sc.tex);
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferSubData(gl.ARRAY_BUFFER,0,sc.order,0,vis);
+  if(isG||VR.lens>0)sizeHDR(W,Hh);
+  const lensOn=VR.lens>0&&HDR.ok,hdr=HDR.ok&&(isG||lensOn),hw=W>>1;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,hdr?HDR.fbo:null);
+  gl.viewport(0,0,W,Hh);gl.colorMask(true,true,true,true);
+  if(isG)gl.clearColor(0.5,0.5,0.5,1);else gl.clearColor(0.045,0.085,0.11,1);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  // each half-screen spans about 84 degrees, a typical phone-headset lens field.
+  // With lens correction the scene is drawn wider, then squeezed back by the barrel resolve.
+  const fd=(hw/2)/Math.tan(42*Math.PI/180),k1=0.44*VR.lens,k2=0.16*VR.lens,e2=0.81;
+  const focal=lensOn?fd/(1+k1*e2+k2*e2*e2):fd;
+  gl.uniform3f(U.uR,rt[0],rt[1],rt[2]);gl.uniform3f(U.uU,upv[0],upv[1],upv[2]);gl.uniform3f(U.uF,fw[0],fw[1],fw[2]);
+  gl.uniform2f(U.uViewport,hw,Hh);gl.uniform2f(U.uOffset,0,0);gl.uniform1f(U.uFocal,focal);gl.uniform1f(U.uGray,0);
+  
+  gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);
+  gl.uniform1f(U.uSpread,spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff);gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uFogK,isG?0:0.10);
+  gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);
+  for(let e=0;e<2;e++){
+    const sg=e===0?-1:1,h=sg*VR.ipd/2;
+    gl.viewport(e*hw,0,hw,Hh);
+    gl.uniform3f(U.uCamPos,P[0]+rt[0]*h,P[1]+rt[1]*h,P[2]+rt[2]*h);
+    gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,vis);
+  }
+  gl.viewport(0,0,W,Hh);
+  if(hdr){
+    gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.disable(gl.BLEND);gl.useProgram(blit);
+    gl.uniform4f(BU.uVR,lensOn?1:0,hw,fd,focal);gl.uniform2f(BU.uK,k1,k2);gl.uniform2f(BU.uSize,W,Hh);gl.uniform1f(BU.uLin,isG?1:0);
+    gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    gl.enable(gl.BLEND);gl.useProgram(prog);
+  }
+}
+window.GROVE={VR:VR,quatDevice:quatDevice,qrot:qrot,HDR:HDR,S:S,cams:cams,get cam(){return cam;},get count(){return SC[S.scene].N;},setScene:setScene};
 requestAnimationFrame(frame);
 })();
 </script>

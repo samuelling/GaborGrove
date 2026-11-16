@@ -4,6 +4,8 @@ A WebGL2 demo of 3D Gabor splatting: Gaussian splatting where each primitive is 
 
 Open `index.html` in a browser. It is a single self-contained file with no build step.
 
+VR head tracking needs the page served over HTTPS as a top-level page (for example GitHub Pages); embedded previews that block motion sensors fall back to drag-to-look.
+
 ## Tabs
 
 - **Mushroom grove** — a procedural twilight grove of about 35,000 Gabor splats. Gills, cap striations, stem fibres, bark, growth rings and fern leaflets all come from carriers, not from extra splats.
@@ -21,6 +23,7 @@ Open `index.html` in a browser. It is a single self-contained file with no build
 - **Contrast sweep** — log-sinusoid between the slider value and a 1% floor.
 - **Pull apart** (Gabor of Gabors) — spreads the small splats out so each is visible.
 - **3D** — anaglyph stereo for blue/green or red/cyan glasses, with a depth slider and an eye swap. Each eye's view is reduced to luminance and written to that eye's colour channels; the two views use off-axis frusta with zero disparity at the orbit target.
+- **VR** — split-screen stereo for phone headsets (Cardboard-style, e.g. Destek V5). Head tracking uses the device orientation sensor; tap, Space or Enter toggles walking (grove) or flying (Gabor) in the gaze direction. **Lens correction** sets the barrel pre-distortion; **Drift forward in VR** moves continuously for headsets with no button.
 - **Carriers on** — switch off to see the same splats as plain Gaussians.
 - **Rotate envelopes too** — rotates the Gaussian envelopes along with the carriers.
 
