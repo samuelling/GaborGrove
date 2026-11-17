@@ -69,9 +69,18 @@ legend{float:left;padding:0;margin-right:8px;font-size:11px;color:var(--dim)}
 .check{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;white-space:nowrap}
 .check input{accent-color:var(--glow);width:16px;height:16px;margin:0}
 #hide{margin-left:auto;padding:5px 12px;min-height:30px;font-size:12px;color:var(--dim)}
-#dock.min .more{display:none}
 :focus-visible{outline:2px solid var(--glow);outline-offset:2px}
 .seg input:focus-visible + span{outline:2px solid var(--glow);outline-offset:2px}
+/* the controls live in a drawer: the grip and first row always show, the rest pulls up */
+#dock{bottom:0;width:min(720px,100%);border-radius:16px 16px 0 0;border-bottom:0;padding:0 14px 12px;gap:10px;max-height:84%;overflow:visible;
+  transform:translate(-50%,var(--ty,0px));transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+#dock.drag{transition:none}
+#grip{flex:none;align-self:stretch;height:26px;min-height:26px;padding:0;border:0;border-radius:0;background:transparent;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
+#grip span{width:46px;height:5px;border-radius:3px;background:var(--dim)}
+#grip:active{cursor:grabbing}
+#dockBody{display:flex;flex-direction:column;gap:10px;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (max-width:520px){#dock{padding:0 12px 10px;gap:6px}#dockBody{gap:6px}}
+@media (prefers-reduced-motion:reduce){#dock{transition:none}}
 #vrui{display:none}
 body.vr header,body.vr #dock{display:none}
 body.vr #vrui{display:block}
@@ -86,7 +95,6 @@ body.vr #gl{cursor:default}
 #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:15px}
 @media (max-width:520px){
   h1{font-size:22px}
-  #dock{padding:10px 12px;gap:6px;bottom:8px;width:calc(100% - 16px);max-height:52%;overflow-y:auto}
   input[type=range]{height:24px}
   .speed{flex-basis:100%}
   .row{gap:8px 10px}
@@ -115,7 +123,8 @@ body.vr #gl{cursor:default}
   <div id="vrTurn">Turn your phone sideways, then place it in the headset.</div>
 </div>
 
-<section id="dock" aria-label="Carrier rotation controls">
+<section id="dock" aria-label="Controls drawer">
+  <button id="grip" type="button" aria-expanded="false" aria-controls="dockBody" aria-label="Controls: drag or tap to open or close"><span></span></button>
   <div class="row">
     <canvas id="dial" width="88" height="88" aria-hidden="true"></canvas>
     <div class="readout"><span>Carrier angle</span><output id="theta">0°</output></div>
@@ -127,6 +136,7 @@ body.vr #gl{cursor:default}
       <output id="speedOut" for="speed">6°/s</output>
     </div>
   </div>
+  <div id="dockBody">
   <div class="row more">
     <fieldset>
       <legend>Rotate</legend>
@@ -217,10 +227,7 @@ body.vr #gl{cursor:default}
     <label class="check"><input type="checkbox" id="carriers" checked>Carriers on</label>
     <label class="check"><input type="checkbox" id="env">Rotate envelopes too</label>
     <label class="check" id="swapWrap" hidden><input type="checkbox" id="swap"><span id="swapText">Swap eyes</span></label>
-    <button id="hide" type="button">Less</button>
   </div>
-  <div class="row" id="moreRow" hidden>
-    <button id="show" type="button" style="margin-left:auto;padding:5px 12px;min-height:30px;font-size:12px">More</button>
   </div>
 </section>
 
@@ -826,16 +833,32 @@ document.addEventListener('fullscreenchange',()=>{if(VR.on&&VR.fs&&!document.ful
 window.addEventListener('keydown',e=>{if(!VR.on)return;if(e.key===' '||e.key==='Enter'){VR.moving=!VR.moving;e.preventDefault();}else if(e.key==='Escape')exitVR();});
 let presetsReady=false;const presetBy={grove:0,gabor:0};
 const S={nest:1,col:0,stereo:0,depth:0.4,swap:false,scene:'grove',spread:0,spreadEff:0,psweep:0,psAmp:0,psPhase:0,sigma:1,sf:1,sfEff:1,sweep:0,sweepAmp:0,sweepPhase:0,con:1,conEff:1,csweep:0,csAmp:0,csPhase:0,theta:0,speed:6,playing:!reduce,wave:0,waveT:0,axis:0,carrier:1,carrierT:1,env:0,auto:!reduce,idle:99};
-let W=1,Hh=1,scale=Math.min(window.devicePixelRatio||1,2),dockShift=0;
+let W=1,Hh=1,scale=Math.min(window.devicePixelRatio||1,2),dockShift=0,dockSm=0,drawerTy=0;
 const dock=document.getElementById('dock');
 function resize(){
   const w=canvas.clientWidth,h=canvas.clientHeight;
   W=Math.max(2,Math.round(w*scale));Hh=Math.max(2,Math.round(h*scale));
   if(canvas.width!==W||canvas.height!==Hh){canvas.width=W;canvas.height=Hh;}
-  const dh=dock.getBoundingClientRect().height+12;
+  const dh=dock.offsetHeight-drawerTy;   // the part of the drawer that is on screen
   dockShift=h>0?clamp(dh/h,0,0.45):0;
 }
-new ResizeObserver(resize).observe(canvas);new ResizeObserver(resize).observe(dock);resize();
+new ResizeObserver(resize).observe(canvas);resize();
+const drawer=(function(){
+  const grip=document.getElementById('grip'),body=document.getElementById('dockBody'),first=dock.querySelector('.row');
+  let open=false,maxTy=0,drag=null;
+  const peek=()=>grip.offsetHeight+first.offsetHeight+12;
+  function place(v){drawerTy=clamp(v,0,maxTy);dock.style.setProperty('--ty',drawerTy+'px');resize();}
+  function set(o){open=o;maxTy=Math.max(0,dock.offsetHeight-peek());dock.classList.remove('drag');place(o?0:maxTy);grip.setAttribute('aria-expanded',String(o));body.inert=!o;}
+  grip.addEventListener('pointerdown',e=>{grip.setPointerCapture(e.pointerId);maxTy=Math.max(0,dock.offsetHeight-peek());drag={y:e.clientY,t0:drawerTy,moved:0,last:e.clientY,v:0};dock.classList.add('drag');});
+  grip.addEventListener('pointermove',e=>{if(!drag)return;drag.v=e.clientY-drag.last;drag.last=e.clientY;drag.moved=Math.max(drag.moved,Math.abs(e.clientY-drag.y));place(drag.t0+e.clientY-drag.y);});
+  const end=e=>{if(!drag)return;const d=drag;drag=null;
+    if(e.type==='pointerup'&&d.moved<6)set(!open);                       // a tap toggles
+    else set(Math.abs(d.v)>4?d.v<0:drawerTy<maxTy*0.5);};                 // a flick decides, otherwise the nearer stop
+  grip.addEventListener('pointerup',end);grip.addEventListener('pointercancel',end);
+  grip.addEventListener('click',e=>{if(e.detail===0)set(!open);});        // keyboard
+  new ResizeObserver(()=>{if(!drag)set(open);}).observe(dock);
+  return{set:set};
+})();
 
 const ptrs=new Map();let pinch=0;
 canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,[e.clientX,e.clientY]);S.idle=0;VR.tap={t:performance.now(),moved:0};
@@ -914,8 +937,6 @@ $('lens').addEventListener('input',e=>{VR.lens=+e.target.value/100;$('lensOut').
 $('drift').addEventListener('change',e=>{VR.drift=e.target.checked;});
 $('carriers').addEventListener('change',e=>{S.carrierT=e.target.checked?1:0;});
 $('env').addEventListener('change',e=>{S.env=e.target.checked?1:0;});
-$('hide').addEventListener('click',()=>{dock.classList.add('min');$('moreRow').hidden=false;});
-$('show').addEventListener('click',()=>{dock.classList.remove('min');$('moreRow').hidden=true;});
 
 /* ---------- frame ---------- */
 let last=performance.now(),slow=0,fast=0;
@@ -941,6 +962,7 @@ function frame(now){
   S.spreadEff=S.spread*(1-S.psAmp*(1-sstep(0.3,1,0.5+0.5*Math.cos(S.psPhase))));
   $('pullOut').textContent=Math.round(S.spreadEff*100)+'%';
   S.wave+=(S.waveT-S.wave)*Math.min(1,dt*3);S.carrier+=(S.carrierT-S.carrier)*Math.min(1,dt*4);
+  dockSm+=(dockShift-dockSm)*Math.min(1,dt*9);
   S.idle+=dt;if(S.auto&&S.idle>2.5&&ptrs.size===0)cam.yaw+=S.scene==='gabor'?0.07*Math.sin((S.idle-2.5)*0.3)*dt:0.045*dt;
   if(VR.on)drawVR(now/1000,dt);else draw(now/1000);
   const deg=((S.theta*180/Math.PI)%360+360)%360;
@@ -968,7 +990,7 @@ function draw(t){
   gl.clearColor(bg*used[0],bg*used[1],bg*used[2],(hdr||st)?1:0);gl.clear(gl.COLOR_BUFFER_BIT);
   const portrait=Hh>W;
   gl.uniform3f(U.uCamPos,pos[0],pos[1],pos[2]);gl.uniform3f(U.uR,rt[0],rt[1],rt[2]);gl.uniform3f(U.uU,upv[0],upv[1],upv[2]);gl.uniform3f(U.uF,fw[0],fw[1],fw[2]);
-  gl.uniform2f(U.uViewport,W,Hh);const yoff=portrait?dockShift*0.9:dockShift*0.45;
+  gl.uniform2f(U.uViewport,W,Hh);const yoff=portrait?dockSm*0.9:dockSm*0.45;
   const focal=0.5*Math.min(Hh,W*1.45)/Math.tan(24*Math.PI/180);gl.uniform1f(U.uFocal,focal);gl.uniform1f(U.uGray,st?1:0);
   gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,fr?0:spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff*(fr?nestSF():1));gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,isG?0:0.10);
   if(!st){gl.uniform2f(U.uOffset,0,yoff);gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,vis);}
@@ -1082,7 +1104,8 @@ function applyPreset(i){
 // a hand-made change means the view no longer matches a preset
 for(const ev of['input','change'])dock.addEventListener(ev,e=>{if(e.isTrusted)markPreset(-1);});
 presetsReady=true;renderPresets();applyPreset(presetBy[S.scene]);
-window.GROVE={SC:SC,FR:FR,applyPreset:applyPreset,VR:VR,quatDevice:quatDevice,qrot:qrot,HDR:HDR,S:S,cams:cams,get cam(){return cam;},get count(){return SC[S.scene].N;},setScene:setScene};
+drawer.set(window.innerWidth>700);
+window.GROVE={drawer:drawer,applyPreset:applyPreset,VR:VR,quatDevice:quatDevice,qrot:qrot,HDR:HDR,S:S,cams:cams,get cam(){return cam;},get count(){return SC[S.scene].N;},setScene:setScene};
 requestAnimationFrame(frame);
 })();
 </script>
