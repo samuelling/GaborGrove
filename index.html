@@ -40,6 +40,10 @@ body.gabor header{text-shadow:none}
 body.gabor h1{color:#0b1118}
 body.gabor header p{color:rgba(11,17,24,.74)}
 body.gabor #dock{background:rgba(9,18,27,.9)}
+.presets{pointer-events:auto;display:flex;gap:6px;margin-top:8px;max-width:calc(100vw - 32px);overflow-x:auto;scrollbar-width:none;text-shadow:none;padding-bottom:2px}
+.presets::-webkit-scrollbar{display:none}
+.presets button{flex:none;font-size:12px;padding:4px 11px;min-height:30px;background:var(--panel);color:var(--cream);white-space:nowrap;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.presets button[aria-pressed="true"]{background:var(--glow);border-color:var(--glow);color:#06201b;font-weight:500}
 header p{margin:0;font-family:var(--mono);font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
 #dock{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);width:min(720px,calc(100% - 24px));background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -100,6 +104,7 @@ body.vr #gl{cursor:default}
     <label><input type="radio" name="scene" id="tabGrove" value="grove" checked><span>Mushroom grove</span></label>
     <label><input type="radio" name="scene" id="tabGabor" value="gabor"><span>Gabor of Gabors</span></label>
   </div>
+  <div class="presets" id="presets" role="group" aria-label="Presets"></div>
 </header>
 <div id="err">This demo needs WebGL 2, which this browser did not provide.</div>
 
@@ -154,6 +159,11 @@ body.vr #gl{cursor:default}
       <input id="sweep" type="range" min="0" max="100" step="1" value="0">
       <output id="sweepOut" for="sweep">off</output>
     </div>
+    <div class="speed">
+      <label for="col">Color by angle</label>
+      <input id="col" type="range" min="0" max="100" step="1" value="0">
+      <output id="colOut" for="col">0%</output>
+    </div>
     <div class="speed" id="conRow">
       <label for="con">Contrast</label>
       <input id="con" type="range" min="0" max="100" step="1" value="100">
@@ -168,6 +178,11 @@ body.vr #gl{cursor:default}
       <label for="pull">Pull apart</label>
       <input id="pull" type="range" min="0" max="100" step="1" value="0">
       <output id="pullOut" for="pull">0%</output>
+    </div>
+    <div class="speed" id="psRow" hidden>
+      <label for="psweep">Pull sweep</label>
+      <input id="psweep" type="range" min="0" max="100" step="1" value="0">
+      <output id="psweepOut" for="psweep">off</output>
     </div>
   </div>
   <div class="row more">
@@ -509,7 +524,7 @@ precision highp float;precision highp int;
 uniform highp sampler2D uData;
 uniform vec3 uCamPos,uR,uU,uF,uAxis,uFog;
 uniform vec2 uViewport,uOffset;
-uniform float uFocal,uTime,uTheta,uWave,uCarrier,uEnv,uAxisMode,uSpread,uFogK,uSigma,uSF,uContrast;
+uniform float uFocal,uTime,uTheta,uWave,uCarrier,uEnv,uAxisMode,uSpread,uFogK,uSigma,uSF,uContrast,uCol;
 in float aIndex;
 out vec2 vUV;out vec2 vKq;out float vPhase;out float vAmp;out vec3 vC1;out vec3 vC2;out vec4 vPar;out float vR2;
 vec3 rot(vec3 v,vec3 a,float c,float s){return v*c+cross(a,v)*s+a*dot(a,v)*(1.0-c);}
@@ -537,8 +552,24 @@ void main(){
   vec3 bt=cross(n,tA);
   k=rot(k,ax,cs,sn);
   if(uEnv>0.5){tA=rot(tA,ax,cs,sn);bt=rot(bt,ax,cs,sn);n=rot(n,ax,cs,sn);}
+  // optional: tint the two carrier phases with opponent colours whose hue follows the carrier angle (180 degrees = full hue circle)
+  if(uCol>0.0&&flag<0.5){
+    float h=2.0*th;
+    vec3 d=cos(h)*vec3(0.956,-0.272,-1.106)+sin(h)*vec3(0.621,-0.647,1.703);
+    vec3 mid=0.5*(c1+c2);float m=dot(mid,vec3(0.299,0.587,0.114));
+    c1=mix(c1,mid,uCol*0.35);c2=mix(c2,mid,uCol*0.35);
+    vec3 a=d*(uCol*0.42*clamp(m+0.12,0.0,0.62));
+    c1+=a;c2-=a;
+  }
   // phase-locked splats: phase follows the rotated carrier, so the cloud stays one coherent grating
-  if(coh>0.5){ph=dot(k,pos);op=mix(op,min(0.92,sqrt(op)*3.3),smoothstep(0.0,0.5,uSpread));pos*=1.0+uSpread*5.0;}
+  if(coh>0.5){
+    ph=dot(k,pos);
+    // pulled apart, only one small Gabor in eight stays visible, so each reads as a separate patch; the rest fade back in as they close up
+    float ap=smoothstep(0.03,0.45,uSpread);
+    op=mix(op,min(0.92,pow(op/0.075,0.25)*0.9)*step(sd,0.125),ap);
+    if(op<0.004){gl_Position=vec4(2.0,2.0,2.0,1.0);return;}
+    pos*=1.0+uSpread*5.0;
+  }
   vec3 pc=toCam(pos-uCamPos);
   if(pc.z<0.25){gl_Position=vec4(2.0,2.0,2.0,1.0);return;}
   // covariance in a frame whose third axis is the viewing ray
@@ -603,7 +634,7 @@ const prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,VS));gl.a
 gl.bindAttribLocation(prog,0,'aIndex');gl.linkProgram(prog);
 if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog));
 gl.useProgram(prog);
-const U={};for(const n of['uData','uCamPos','uR','uU','uF','uAxis','uFog','uViewport','uOffset','uFocal','uTime','uTheta','uWave','uCarrier','uEnv','uAxisMode','uSpread','uFogK','uSigma','uSF','uContrast','uGray'])U[n]=gl.getUniformLocation(prog,n);
+const U={};for(const n of['uData','uCamPos','uR','uU','uF','uAxis','uFog','uViewport','uOffset','uFocal','uTime','uTheta','uWave','uCarrier','uEnv','uAxisMode','uSpread','uFogK','uSigma','uSF','uContrast','uGray','uCol'])U[n]=gl.getUniformLocation(prog,n);
 
 gl.activeTexture(gl.TEXTURE0);gl.uniform1i(U.uData,0);
 
@@ -730,7 +761,8 @@ function exitVR(){
 }
 document.addEventListener('fullscreenchange',()=>{if(VR.on&&VR.fs&&!document.fullscreenElement)exitVR();});
 window.addEventListener('keydown',e=>{if(!VR.on)return;if(e.key===' '||e.key==='Enter'){VR.moving=!VR.moving;e.preventDefault();}else if(e.key==='Escape')exitVR();});
-const S={stereo:0,depth:0.4,swap:false,scene:'grove',spread:0,sigma:1,sf:1,sfEff:1,sweep:0,sweepAmp:0,sweepPhase:0,con:1,conEff:1,csweep:0,csAmp:0,csPhase:0,theta:0,speed:6,playing:!reduce,wave:0,waveT:0,axis:0,carrier:1,carrierT:1,env:0,auto:!reduce,idle:99};
+let presetsReady=false;const presetBy={grove:0,gabor:0};
+const S={col:0,stereo:0,depth:0.4,swap:false,scene:'grove',spread:0,spreadEff:0,psweep:0,psAmp:0,psPhase:0,sigma:1,sf:1,sfEff:1,sweep:0,sweepAmp:0,sweepPhase:0,con:1,conEff:1,csweep:0,csAmp:0,csPhase:0,theta:0,speed:6,playing:!reduce,wave:0,waveT:0,axis:0,carrier:1,carrierT:1,env:0,auto:!reduce,idle:99};
 let W=1,Hh=1,scale=Math.min(window.devicePixelRatio||1,2),dockShift=0;
 const dock=document.getElementById('dock');
 function resize(){
@@ -781,15 +813,19 @@ const sweepRate=v=>v===0?0:(1/60)*Math.pow(20,(v-1)/99);
 // contrast slider is logarithmic: 1% to 100%
 $('con').addEventListener('input',e=>{S.con=Math.pow(10,-2+2*(+e.target.value)/100);});
 $('csweep').addEventListener('input',e=>{const v=+e.target.value;S.csweep=sweepRate(v);if(v===0)S.csPhase=0;$('csweepOut').textContent=v===0?'off':Math.round(1/S.csweep)+' s';});
-$('pull').addEventListener('input',e=>{S.spread=+e.target.value/100;$('pullOut').textContent=e.target.value+'%';});
+$('pull').addEventListener('input',e=>{S.spread=+e.target.value/100;});
+$('col').addEventListener('input',e=>{S.col=+e.target.value/100;$('colOut').textContent=e.target.value+'%';});
+$('psweep').addEventListener('input',e=>{const v=+e.target.value;S.psweep=sweepRate(v);if(v===0)S.psPhase=0;$('psweepOut').textContent=v===0?'off':Math.round(1/S.psweep)+' s';});
 function setScene(name,quiet){
   if(!SC[name])name='grove';
   S.scene=name;cam=cams[name];S.axis=axisBy[name];S.idle=99;
   $('axisSurface').checked=S.axis===0;$('axisWorld').checked=S.axis===1;
   $('tabGrove').checked=name==='grove';$('tabGabor').checked=name==='gabor';
   document.body.classList.toggle('gabor',name==='gabor');
-  $('pullRow').hidden=name!=='gabor';
-  $('count').textContent=SC[name].N.toLocaleString('en-US')+' Gabor splats · drag to orbit, pinch to zoom';
+  $('pullRow').hidden=$('psRow').hidden=name!=='gabor';
+  const nn=SC[name].N.toLocaleString('en-US');
+  $('count').textContent=name==='gabor'?'1 big Gabor made of '+nn+' small Gabors · drag to orbit':nn+' Gabor splats · drag to orbit, pinch to zoom';
+  if(presetsReady){renderPresets();applyPreset(presetBy[name]);}
   canvas.setAttribute('aria-label',name==='gabor'?'One large 3D Gabor on a gray field, built from small 3D Gabor splats. Drag to orbit, pinch or scroll to zoom.':'A grove of mushrooms rendered with 3D Gabor splats. Drag to orbit, pinch or scroll to zoom.');
   if(!quiet){try{location.hash=name;}catch(err){}}
 }
@@ -831,8 +867,13 @@ function frame(now){
   S.csAmp+=((S.csweep>0?1:0)-S.csAmp)*Math.min(1,dt*2.5);
   S.conEff=S.con>0.01?S.con*Math.pow(0.01/S.con,S.csAmp*(0.5-0.5*Math.cos(S.csPhase))):S.con;
   const cp100=S.conEff*100;$('conOut').textContent=(cp100<10?cp100.toFixed(1):cp100.toFixed(0))+'%';
+  // pull sweep: starts apart, draws together, holds as one Gabor, then comes apart again
+  if(S.playing)S.psPhase+=TAU*S.psweep*dt;
+  S.psAmp+=((S.psweep>0?1:0)-S.psAmp)*Math.min(1,dt*2.5);
+  S.spreadEff=S.spread*(1-S.psAmp*(1-sstep(0.3,1,0.5+0.5*Math.cos(S.psPhase))));
+  $('pullOut').textContent=Math.round(S.spreadEff*100)+'%';
   S.wave+=(S.waveT-S.wave)*Math.min(1,dt*3);S.carrier+=(S.carrierT-S.carrier)*Math.min(1,dt*4);
-  S.idle+=dt;if(S.auto&&S.idle>2.5&&ptrs.size===0)cam.yaw+=S.scene==='gabor'?0.15*Math.sin((S.idle-2.5)*0.3)*dt:0.045*dt;
+  S.idle+=dt;if(S.auto&&S.idle>2.5&&ptrs.size===0)cam.yaw+=S.scene==='gabor'?0.07*Math.sin((S.idle-2.5)*0.3)*dt:0.045*dt;
   if(VR.on)drawVR(now/1000,dt);else draw(now/1000);
   const deg=((S.theta*180/Math.PI)%360+360)%360;
   thetaOut.textContent=deg.toFixed(0)+'°';dial.style.transform='rotate('+deg.toFixed(1)+'deg)';
@@ -840,7 +881,7 @@ function frame(now){
 }
 function draw(t){
   const cp=Math.cos(cam.pitch),sp=Math.sin(cam.pitch);
-  const sc=SC[S.scene],isG=S.scene==='gabor',spread=isG?S.spread:0,dist=cam.dist*(1+spread*3.6);
+  const sc=SC[S.scene],isG=S.scene==='gabor',spread=isG?S.spreadEff:0,dist=cam.dist*(1+spread*2.4);
   const pos=[cam.target[0]+dist*cp*Math.sin(cam.yaw),cam.target[1]+dist*sp,cam.target[2]+dist*cp*Math.cos(cam.yaw)];
   if(!isG){const gmin=ground(pos[0],pos[2])+0.22;if(pos[1]<gmin)pos[1]=gmin;}
   const fw=norm(sub3(cam.target,pos)),rt=norm(cross(fw,[0,1,0])),upv=cross(rt,fw);
@@ -860,7 +901,7 @@ function draw(t){
   gl.uniform3f(U.uCamPos,pos[0],pos[1],pos[2]);gl.uniform3f(U.uR,rt[0],rt[1],rt[2]);gl.uniform3f(U.uU,upv[0],upv[1],upv[2]);gl.uniform3f(U.uF,fw[0],fw[1],fw[2]);
   gl.uniform2f(U.uViewport,W,Hh);const yoff=portrait?dockShift*0.9:dockShift*0.45;
   const focal=0.5*Math.min(Hh,W*1.45)/Math.tan(24*Math.PI/180);gl.uniform1f(U.uFocal,focal);gl.uniform1f(U.uGray,st?1:0);
-  gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff);gl.uniform1f(U.uContrast,S.conEff);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,isG?0:0.10);
+  gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff);gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,isG?0:0.10);
   if(!st){gl.uniform2f(U.uOffset,0,yoff);gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,vis);}
   else{
     // off-axis stereo pair: eyes sit either side of the camera, frusta sheared so the orbit target has zero disparity
@@ -882,7 +923,7 @@ function draw(t){
   }
 }
 function drawVR(t,dt){
-  const sc=SC[S.scene],isG=S.scene==='gabor',spread=isG?S.spread:0,P=VR.pos[S.scene];
+  const sc=SC[S.scene],isG=S.scene==='gabor',spread=isG?S.spreadEff:0,P=VR.pos[S.scene];
   // head pose: sensor quaternion with a yaw offset, or drag-to-look when no sensor reports
   let rt,upv,fw;
   if(VR.q){const h=VR.yawOff/2,q=qmul([0,Math.sin(h),0,Math.cos(h)],VR.q);rt=qrot(q,[1,0,0]);upv=qrot(q,[0,1,0]);fw=qrot(q,[0,0,-1]);}
@@ -916,7 +957,7 @@ function drawVR(t,dt){
   gl.uniform2f(U.uViewport,hw,Hh);gl.uniform2f(U.uOffset,0,0);gl.uniform1f(U.uFocal,focal);gl.uniform1f(U.uGray,0);
   
   gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);
-  gl.uniform1f(U.uSpread,spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff);gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uFogK,isG?0:0.10);
+  gl.uniform1f(U.uSpread,spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff);gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform1f(U.uFogK,isG?0:0.10);
   gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);
   for(let e=0;e<2;e++){
     const sg=e===0?-1:1,h=sg*VR.ipd/2;
@@ -932,7 +973,44 @@ function drawVR(t,dt){
     gl.enable(gl.BLEND);gl.useProgram(prog);
   }
 }
-window.GROVE={VR:VR,quatDevice:quatDevice,qrot:qrot,HDR:HDR,S:S,cams:cams,get cam(){return cam;},get count(){return SC[S.scene].N;},setScene:setScene};
+/* ---------- presets: each tab opens in its first one ---------- */
+const PRESETS={
+  grove:[
+    {name:'Kaleidoscope',speed:12,wave:1,sf:-10,sweep:55,col:80},
+    {name:'Zebra',speed:18,sf:-45},
+    {name:'Pointillist',speed:6,psf:-70,sf:40,col:40},
+    {name:'Melt',speed:9,wave:1,world:1,env:1},
+    {name:'Pulse',speed:4,sweep:70,cs:80},
+    {name:'Calm',speed:6}],
+  gabor:[
+    {name:'Assemble',speed:3,world:1,sf:50,pull:100,ps:62},
+    {name:'Twist',speed:14,world:1,wave:1,col:70},
+    {name:'Shatter',speed:16,col:60},
+    {name:'Zoom',speed:8,world:1,sweep:77},
+    {name:'Swarm',speed:20,pull:70,psf:-25,sf:40},
+    {name:'Classic',speed:6,world:1}]
+};
+function markPreset(i){const b=$('presets').children;for(let k=0;k<b.length;k++)b[k].setAttribute('aria-pressed',String(k===i));}
+function renderPresets(){
+  const box=$('presets');box.textContent='';
+  PRESETS[S.scene].forEach((p,i)=>{const b=document.createElement('button');b.type='button';b.textContent=p.name;b.addEventListener('click',()=>applyPreset(i));box.appendChild(b);});
+}
+function applyPreset(i){
+  const p=PRESETS[S.scene][i];if(!p)return;presetBy[S.scene]=i;
+  const setV=(id,v)=>{const e=$(id);e.value=v;e.dispatchEvent(new Event('input'));};
+  const pick=id=>{const e=$(id);e.checked=true;e.dispatchEvent(new Event('change'));};
+  const setC=(id,on)=>{const e=$(id);if(e.checked!==on){e.checked=on;e.dispatchEvent(new Event('change'));}};
+  setV('speed',p.speed);setV('psf',p.psf||0);setV('sf',p.sf||0);setV('sweep',p.sweep||0);
+  setV('con',p.con===undefined?100:p.con);setV('csweep',p.cs||0);setV('pull',p.pull||0);setV('psweep',p.ps||0);setV('col',p.col||0);
+  pick(p.wave?'spinWave':'spinTogether');pick(p.world?'axisWorld':'axisSurface');
+  setC('env',!!p.env);setC('carriers',true);
+  S.sweepPhase=0;S.csPhase=0;S.psPhase=0;
+  markPreset(i);
+}
+// a hand-made change means the view no longer matches a preset
+for(const ev of['input','change'])dock.addEventListener(ev,e=>{if(e.isTrusted)markPreset(-1);});
+presetsReady=true;renderPresets();applyPreset(presetBy[S.scene]);
+window.GROVE={applyPreset:applyPreset,VR:VR,quatDevice:quatDevice,qrot:qrot,HDR:HDR,S:S,cams:cams,get cam(){return cam;},get count(){return SC[S.scene].N;},setScene:setScene};
 requestAnimationFrame(frame);
 })();
 </script>
