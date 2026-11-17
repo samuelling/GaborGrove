@@ -16,7 +16,7 @@ VR head tracking needs the page served over HTTPS as a top-level page (for examp
 Each tab opens in its first preset; the pills under the tabs switch between them. A preset just sets the controls below, and changing any control by hand clears the highlight.
 
 - **Mushroom grove** — Kaleidoscope (default), Zebra, Pointillist, Melt, Pulse, Calm.
-- **Gabor of Gabors** — Assemble (default), Twist, Shatter, Zoom, Swarm, Classic. Assemble starts with the small Gabors pulled apart, draws them together into the one big Gabor, holds, and repeats.
+- **Gabor of Gabors** — Assemble (default), Nested, Twist, Shatter, Zoom, Swarm, Classic. Nested runs the multi-scale cascade described under Nesting. Assemble starts with the small Gabors pulled apart, draws them together into the one big Gabor, holds, and repeats.
 
 ## Controls
 
@@ -29,6 +29,7 @@ Each tab opens in its first preset; the pills under the tabs switch between them
 - **Contrast** — carrier contrast, 1% to 100% on a log axis. In the grove this is texture contrast; object colour and shading stay.
 - **Contrast sweep** — log-sinusoid between the slider value and a 1% floor.
 - **Color by angle** — tints the two carrier phases with opponent colours whose hue follows the carrier angle (180° of orientation spans the hue circle).
+- **Nesting** (Gabor of Gabors) — how many scales deep the recursion goes, from classic (one big Gabor made of 1,290 small ones) up to 6 scales. At 2 or more, the big Gabor divides into eight half-size Gabors, each of those into eight more, and so on (8, 64, 512, 4,096, 32,768 at the bottom). Pull apart opens one scale at a time, and the camera follows one branch down so the pieces stay about the same size on screen. The pieces share one phase-locked carrier whose frequency rises as each scale opens, they are thin along the view axis (a fat many-cycle Gabor vanishes a few degrees off axis), and pieces behind the focused one fade toward gray.
 - **Pull apart** (Gabor of Gabors) — spreads the small Gabors out. Once apart, only one in eight stays visible so each reads as a separate patch; the rest fade back in as they close up.
 - **Pull sweep** (Gabor of Gabors) — cycles between pulled apart and assembled.
 - **3D** — anaglyph stereo for blue/green or red/cyan glasses, with a depth slider and an eye swap. Each eye's view is reduced to luminance and written to that eye's colour channels; the two views use off-axis frusta with zero disparity at the orbit target.
