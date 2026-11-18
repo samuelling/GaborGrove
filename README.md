@@ -18,22 +18,30 @@ Each tab opens in its first preset; the pills under the tabs switch between them
 
 - **Mushroom grove** — Kaleidoscope (default), Zebra, Pointillist, Melt, Pulse, Calm.
 - **Gabor of Gabors** — Assemble (default), Nested, Twist, Shatter, Zoom, Swarm, Classic. Nested runs the multi-scale cascade described under Nesting. Assemble starts with the small Gabors pulled apart, draws them together into the one big Gabor, holds, and repeats.
-- **Portrait** — Engraved (default), Faithful (carriers faded out, so the plain scan), Kaleidoscope, Pointillist, Shatter, Melt.
+- **Portrait** — Assemble (default), Trip, Breathe, Engraved, Kaleidoscope, Pointillist, Shatter, Melt, In color, Faithful. All but Pointillist, In color and Faithful are grayscale. Assemble starts as a cloud of separate Gabor patches and draws them together into the face; Trip sweeps pull, point spread and spatial frequency at once with angle-driven colour; Breathe sweeps the point spread; Faithful fades the carriers out, so it is the plain scan in colour.
+
+## Your own scan
+
+In the Portrait tab, **+ Your scan** opens a Scaniverse `.spz` splat file and turns it into the same animated Gabor splats. The file is unpacked and converted in the browser; nothing is uploaded and no server or AI service is involved. Crop the scan to the subject in Scaniverse first. Up to 70,000 of the most opaque splats are kept, far-off background splats are dropped, and SPZ versions 2 and 3 are supported.
 
 ## Controls
+
+The controls sit in a shelf that slides up from the bottom edge. Closed, it is fully off screen and only its **Controls** tab shows; tap or drag the tab to open it, and use the tab or ✕ to close it. **WTF?** (top right) opens a plain-words explainer of splats, Gabors and what each tab is made of.
 
 - **Carrier angle / Speed** — rotates every carrier's orientation over time.
 - **Rotate: Together / As a wave** — one angle scene-wide, or an angle that lags with position.
 - **About: Each splat's own axis / One world axis** — in-surface rotation, or a shared 3D rotation.
 - **Point spread** — scales every splat's Gaussian envelope (0.33× to 3×).
+- **Spread sweep** — swells and shrinks every envelope together, up to 2.4× either side of the Point spread value, on a log axis.
 - **Spatial freq** — scales every carrier's frequency (0.25× to 4×).
 - **SF sweep** — oscillates spatial frequency one octave either side of the slider value.
 - **Contrast** — carrier contrast, 1% to 100% on a log axis. In the grove this is texture contrast; object colour and shading stay.
 - **Contrast sweep** — log-sinusoid between the slider value and a 1% floor.
 - **Color by angle** — tints the two carrier phases with opponent colours whose hue follows the carrier angle (180° of orientation spans the hue circle).
 - **Nesting** (Gabor of Gabors) — how many scales deep the recursion goes, from classic (one big Gabor made of 1,290 small ones) up to 6 scales. At 2 or more, the big Gabor divides into eight half-size Gabors, each of those into eight more, and so on (8, 64, 512, 4,096, 32,768 at the bottom). Pull apart opens one scale at a time, and the camera follows one branch down so the pieces stay about the same size on screen. The pieces share one phase-locked carrier whose frequency rises as each scale opens, they are thin along the view axis (a fat many-cycle Gabor vanishes a few degrees off axis), and pieces behind the focused one fade toward gray.
-- **Pull apart** (Gabor of Gabors) — spreads the small Gabors out. Once apart, only one in eight stays visible so each reads as a separate patch; the rest fade back in as they close up.
-- **Pull sweep** (Gabor of Gabors) — cycles between pulled apart and assembled.
+- **Pull apart** (Gabor of Gabors, Portrait) — spreads the pieces out. In Gabor of Gabors, only one small Gabor in eight stays visible once apart, so each reads as a separate patch. In Portrait, one scan splat in 48 stays and grows into a patch wide enough to carry a few stripes of its own, with a longer wavelength so the stripes survive the camera backing off. The rest fade back in as it closes up.
+- **Pull sweep** (Gabor of Gabors, Portrait) — cycles between pulled apart and assembled.
+- **Scan color** (Portrait) — how much of the scan's own colour is kept. Portrait presets open in grayscale; Color by angle still tints on top.
 - **3D** — anaglyph stereo for blue/green or red/cyan glasses, with a depth slider and an eye swap. Each eye's view is reduced to luminance and written to that eye's colour channels; the two views use off-axis frusta with zero disparity at the orbit target.
 - **VR** — split-screen stereo for phone headsets (Cardboard-style, e.g. Destek V5). Head tracking uses the device orientation sensor; tap, Space or Enter toggles walking (grove) or flying (Gabor) in the gaze direction. **Lens correction** sets the barrel pre-distortion; **Drift forward in VR** moves continuously for headsets with no button.
 - **Carriers on** — switch off to see the same splats as plain Gaussians.
@@ -58,7 +66,7 @@ addEventListener('message', e => {
 });
 ```
 
-- **Inputs:** `speed`, `pointSpread`, `spatialFreq`, `sfSweep`, `colorByAngle`, `contrast`, `contrastSweep`, `pullApart`, `pullSweep`, `nesting`, `depth3d`, `lens`, `angle` (the carrier angle itself, one turn per 0..1), `scene` (below 0.5 grove, above Gabor of Gabors).
+- **Inputs:** `speed`, `pointSpread`, `spatialFreq`, `sfSweep`, `colorByAngle`, `contrast`, `contrastSweep`, `pullApart`, `pullSweep`, `nesting`, `depth3d`, `lens`, `angle` (the carrier angle itself, one turn per 0..1), `scene` (below 0.5 grove, above Gabor of Gabors), `spreadSweep`, `scanColor`.
 - **Outputs:** `angle`, `angleSin`, `spatialFreq`, `contrast`, `pullApart`.
 - A slider moved by hand, or set with `gg:set`, becomes the centre that `gg:mod` swings around.
 - Pages on the same origin can use `new BroadcastChannel('gabor-grove')` with the same messages.

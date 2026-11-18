@@ -72,15 +72,22 @@ legend{float:left;padding:0;margin-right:8px;font-size:11px;color:var(--dim)}
 #hide{margin-left:auto;padding:5px 12px;min-height:30px;font-size:12px;color:var(--dim)}
 :focus-visible{outline:2px solid var(--glow);outline-offset:2px}
 .seg input:focus-visible + span{outline:2px solid var(--glow);outline-offset:2px}
-/* the controls live in a drawer: the grip and first row always show, the rest pulls up */
-#dock{bottom:0;width:min(720px,100%);border-radius:16px 16px 0 0;border-bottom:0;padding:0 14px 12px;gap:10px;max-height:84%;overflow:visible;
+/* the controls live in a shelf that slides up from the bottom edge. Closed, it is fully off screen and only its grab tab shows:
+   tap the tab, or drag it, to pull the shelf up and push it back down */
+#dock{bottom:0;width:min(720px,100%);border-radius:16px 16px 0 0;border-bottom:0;padding:12px 14px 12px;gap:10px;max-height:84%;box-shadow:0 -8px 30px rgba(0,0,0,.45);overflow:visible;
   transform:translate(-50%,var(--ty,0px));transition:transform .3s cubic-bezier(.2,.8,.2,1)}
 #dock.drag{transition:none}
-#grip{flex:none;align-self:stretch;height:26px;min-height:26px;padding:0;border:0;border-radius:0;background:transparent;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
-#grip span{width:46px;height:5px;border-radius:3px;background:var(--dim)}
+#grip{position:absolute;left:50%;top:-34px;transform:translateX(-50%);width:140px;height:34px;min-height:34px;padding:0 13px;border:1px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0;
+  background:var(--panel);color:var(--glow);display:flex;align-items:center;justify-content:space-between;cursor:grab;touch-action:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 -6px 16px rgba(0,0,0,.3)}
+#grip i{width:16px;height:8px;border-top:2px solid var(--dim);border-bottom:2px solid var(--dim);opacity:.85}
+#grip b{font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase}
 #grip:active{cursor:grabbing}
+#dock.open #grip{color:var(--cream)}
+body.gabor #grip{background:rgba(9,18,27,.9)}
+#dockClose{position:absolute;top:9px;right:10px;width:30px;height:30px;min-height:30px;padding:0;border:0;border-radius:50%;background:rgba(241,227,196,.12);font-size:13px;line-height:1}
+#dock>.row{padding-right:36px}
 #dockBody{display:flex;flex-direction:column;gap:10px;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (max-width:520px){#dock{padding:0 12px 10px;gap:6px}#dockBody{gap:6px}}
+@media (max-width:520px){#dock{padding:10px 12px 10px;gap:6px}#dockBody{gap:6px}}
 @media (prefers-reduced-motion:reduce){#dock{transition:none}}
 .led{width:9px;height:9px;border-radius:50%;background:var(--line);flex:none}
 .led.on{background:var(--glow);box-shadow:0 0 8px var(--glow)}
@@ -99,6 +106,21 @@ body.vr #gl{cursor:default}
 @media (orientation:portrait){body.vr #vrTurn{display:flex}}
 #vrEnter{background:var(--glow);border-color:var(--glow);color:#06201b;font-weight:500}
 #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:15px}
+#wtfBtn{position:fixed;top:7px;right:10px;pointer-events:auto;padding:3px 12px;min-height:28px;font-size:12px;font-weight:500;letter-spacing:.04em;background:var(--panel);color:var(--cream);text-shadow:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#wtf{position:fixed;inset:0;z-index:5;background:rgba(5,9,14,.74);display:flex;justify-content:center;padding:14px;overflow-y:auto;overscroll-behavior:contain;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#wtf .card{position:relative;width:min(560px,100%);margin:auto 0;background:#0c1721;border:1px solid var(--line);border-radius:16px;padding:20px 20px 22px}
+#wtf h2{font-family:var(--display);font-style:italic;font-weight:500;font-size:25px;line-height:1.1;margin:0 44px 2px 0}
+#wtf h3{font-size:12px;font-weight:500;color:var(--glow);margin:18px 0 4px;letter-spacing:.06em;text-transform:uppercase}
+#wtf p{margin:0 0 6px;font-size:14.5px;line-height:1.5}
+#wtf .lede{color:var(--dim)}
+#wtf .eq{display:flex;align-items:flex-start;justify-content:center;gap:8px;margin:12px 0 2px;font-family:var(--mono);color:var(--dim)}
+#wtf .eq figure{margin:0;text-align:center;font-size:11px}
+#wtf .eq canvas{display:block;width:78px;height:78px;border-radius:10px;border:1px solid var(--line);margin-bottom:4px}
+#wtf .eq b{font-weight:400;font-size:18px;line-height:78px}
+#wtf dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13.5px;line-height:1.4}
+#wtf dt{color:var(--dim);white-space:nowrap}
+#wtf dd{margin:0}
+#wtfClose{position:absolute;top:12px;right:12px;width:36px;padding:0;font-size:17px;line-height:1}
 @media (max-width:520px){
   h1{font-size:22px}
   input[type=range]{height:24px}
@@ -120,7 +142,46 @@ body.vr #gl{cursor:default}
     <label><input type="radio" name="scene" id="tabPortrait" value="portrait"><span>Portrait</span></label>
   </div>
   <div class="presets" id="presets" role="group" aria-label="Presets"></div>
+  <button id="wtfBtn" type="button" aria-haspopup="dialog" aria-label="WTF? What this is, explained">WTF?</button>
 </header>
+<div id="wtf" role="dialog" aria-modal="true" aria-labelledby="wtfTitle" hidden>
+  <div class="card">
+    <button id="wtfClose" type="button" aria-label="Close">×</button>
+    <h2 id="wtfTitle">WTF am I looking at?</h2>
+    <p class="lede">Scenes built from thousands of soft striped blobs. No triangles, no photos, no video.</p>
+    <h3>1 · A splat</h3>
+    <p>A soft blob of color hanging in 3D space: dense in the middle, fading to nothing, like one puff from a spray can. Its math name is a Gaussian.</p>
+    <h3>2 · Splatting</h3>
+    <p>Pile up thousands of puffs, each with its own position, size, tilt and color, and they add up to a scene, the way dabs add up to a pointillist painting. Phone scanning apps build scenes this way from a walk-around video.</p>
+    <h3>3 · A Gabor</h3>
+    <p>A blob multiplied by a wave. The blob says where; the wave adds stripes with a direction and a width.</p>
+    <div class="eq">
+      <figure><canvas id="wtfA" width="156" height="156"></canvas>blob</figure><b>×</b>
+      <figure><canvas id="wtfB" width="156" height="156"></canvas>wave</figure><b>=</b>
+      <figure><canvas id="wtfC" width="156" height="156"></canvas>Gabor</figure>
+    </div>
+    <p>Vision scientists use Gabors constantly, because cells early in the brain's visual system respond to little striped patches like this one.</p>
+    <h3>4 · A 3D Gabor splat</h3>
+    <p>Everything here is made of these. The stripes are not painted on the blob's surface. They are a wave running through its whole volume, like grain through a block of wood. Orbit the scene and the stripes shift the way grain does when you cut the block at a new angle. Look straight down the wave and they vanish.</p>
+    <h3>5 · What is turning</h3>
+    <p>The dial is the direction of the wave. It turns inside every splat at once, so the stripes rotate while the shapes stay put.</p>
+    <h3>The tabs</h3>
+    <dl>
+      <dt>Mushroom grove</dt><dd>About 35,000 Gabor splats placed by rules written in code. Nothing was scanned.</dd>
+      <dt>Gabor of Gabors</dt><dd>One big Gabor built from small ones. Their waves are lined up so that together they draw the big one's stripes. Nesting repeats the trick, Gabors inside Gabors.</dd>
+      <dt>Portrait</dt><dd>A phone scan of a real person, with a wave laid through every blob. Pull it apart to see the separate patches.</dd>
+    </dl>
+    <h3>The controls</h3>
+    <dl>
+      <dt>Point spread</dt><dd>How big each blob is.</dd>
+      <dt>Spatial freq</dt><dd>How fine the stripes are.</dd>
+      <dt>Contrast</dt><dd>How strong the stripes are.</dd>
+      <dt>Pull apart</dt><dd>Separates the pieces so you can see what the whole is made of.</dd>
+      <dt>Sweeps</dt><dd>Move a control back and forth for you.</dd>
+      <dt>3D and VR</dt><dd>Colored glasses or a phone headset, to stand inside it.</dd>
+    </dl>
+  </div>
+</div>
 <div id="err">This demo needs WebGL 2, which this browser did not provide.</div>
 
 <div id="vrui">
@@ -131,7 +192,8 @@ body.vr #gl{cursor:default}
 </div>
 
 <section id="dock" aria-label="Controls drawer">
-  <button id="grip" type="button" aria-expanded="false" aria-controls="dockBody" aria-label="Controls: drag or tap to open or close"><span></span></button>
+  <button id="grip" type="button" aria-expanded="false" aria-controls="dockBody" aria-label="Controls: tap or drag to open or close"><i aria-hidden="true"></i><b>Controls</b><i aria-hidden="true"></i></button>
+  <button id="dockClose" type="button" aria-label="Close controls">✕</button>
   <div class="row">
     <canvas id="dial" width="88" height="88" aria-hidden="true"></canvas>
     <div class="readout"><span>Carrier angle</span><output id="theta">0°</output></div>
@@ -167,6 +229,11 @@ body.vr #gl{cursor:default}
       <output id="psfOut" for="psf">1.00×</output>
     </div>
     <div class="speed">
+      <label for="bsweep">Spread sweep</label>
+      <input id="bsweep" type="range" min="0" max="100" step="1" value="0">
+      <output id="bsweepOut" for="bsweep">off</output>
+    </div>
+    <div class="speed">
       <label for="sf">Spatial freq</label>
       <input id="sf" type="range" min="-100" max="100" step="1" value="0">
       <output id="sfOut" for="sf">1.00×</output>
@@ -180,6 +247,11 @@ body.vr #gl{cursor:default}
       <label for="col">Color by angle</label>
       <input id="col" type="range" min="0" max="100" step="1" value="0">
       <output id="colOut" for="col">0%</output>
+    </div>
+    <div class="speed" id="satRow" hidden>
+      <label for="sat">Scan color</label>
+      <input id="sat" type="range" min="0" max="100" step="1" value="0">
+      <output id="satOut" for="sat">0%</output>
     </div>
     <div class="speed" id="conRow">
       <label for="con">Contrast</label>
@@ -550,7 +622,8 @@ precision highp float;precision highp int;
 uniform highp sampler2D uData;
 uniform vec3 uCamPos,uR,uU,uF,uAxis,uFog;
 uniform vec2 uViewport,uOffset;
-uniform float uFocal,uTime,uTheta,uWave,uCarrier,uEnv,uAxisMode,uSpread,uFogK,uSigma,uSF,uContrast,uCol;
+uniform float uFocal,uTime,uTheta,uWave,uCarrier,uEnv,uAxisMode,uSpread,uFogK,uSigma,uSF,uContrast,uCol,uPort,uSat;
+const float PORT_K=3.4;
 in float aIndex;
 out vec2 vUV;out vec2 vKq;out float vPhase;out float vAmp;out vec3 vC1;out vec3 vC2;out vec4 vPar;out float vR2;
 vec3 rot(vec3 v,vec3 a,float c,float s){return v*c+cross(a,v)*s+a*dot(a,v)*(1.0-c);}
@@ -563,6 +636,7 @@ void main(){
   vec3 pos=d0.xyz;float op=d0.w;
   vec3 tA=d1.xyz,n=d2.xyz,sc=vec3(d1.w,d2.w,d3.w)*uSigma;
   vec3 c1=d3.rgb,c2=d4.rgb;float w=d4.w;
+  if(uSat<1.0){c1=mix(vec3(dot(c1,vec3(0.299,0.587,0.114))),c1,uSat);c2=mix(vec3(dot(c2,vec3(0.299,0.587,0.114))),c2,uSat);}
   vec3 k=d5.xyz*uSF;float ph=d5.w*uSF;
   float wa=d6.x,flag=d6.y,sd=d6.z,coh=d6.w;
   vec2 corner=vec2(float(gl_VertexID&1),float((gl_VertexID>>1)&1))*2.0-1.0;
@@ -588,7 +662,18 @@ void main(){
     c1+=a;c2-=a;
   }
   // phase-locked splats: phase follows the rotated carrier, so the cloud stays one coherent grating
-  if(coh>0.5){
+  if(coh>0.5&&uPort>0.5){
+    // a scan pulled apart: one splat in 48 stays and grows into a patch wide enough to carry a few stripes of its own,
+    // with a longer wavelength so the stripes survive the camera backing off; the rest fade back in as it closes up
+    float ap=smoothstep(0.02,0.5,uSpread);
+    k/=mix(1.0,PORT_K,ap);
+    ph=dot(k,pos);
+    op=mix(op,0.92*step(sd,0.021),ap);
+    if(op<0.004){gl_Position=vec4(2.0,2.0,2.0,1.0);return;}
+    sc=mix(sc,clamp(sc*11.0,vec3(0.06),vec3(0.3))*vec3(1.0,1.0,0.45)*uSigma,ap);
+    vec3 md=0.5*(c1+c2),dl=0.5*(c1-c2)*mix(1.0,2.4,ap);c1=md+dl;c2=md-dl;
+    pos*=1.0+uSpread*5.0;
+  }else if(coh>0.5){
     ph=dot(k,pos);
     // pulled apart, only one small Gabor in eight stays visible, so each reads as a separate patch; the rest fade back in as they close up
     float ap=smoothstep(0.03,0.45,uSpread);
@@ -660,7 +745,7 @@ const prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,VS));gl.a
 gl.bindAttribLocation(prog,0,'aIndex');gl.linkProgram(prog);
 if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog));
 gl.useProgram(prog);
-const U={};for(const n of['uData','uCamPos','uR','uU','uF','uAxis','uFog','uViewport','uOffset','uFocal','uTime','uTheta','uWave','uCarrier','uEnv','uAxisMode','uSpread','uFogK','uSigma','uSF','uContrast','uGray','uCol'])U[n]=gl.getUniformLocation(prog,n);
+const U={};for(const n of['uData','uCamPos','uR','uU','uF','uAxis','uFog','uViewport','uOffset','uFocal','uTime','uTheta','uWave','uCarrier','uEnv','uAxisMode','uSpread','uPort','uSat','uFogK','uSigma','uSF','uContrast','uGray','uCol'])U[n]=gl.getUniformLocation(prog,n);
 
 gl.activeTexture(gl.TEXTURE0);gl.uniform1i(U.uData,0);
 
@@ -847,7 +932,7 @@ function exitVR(){
 document.addEventListener('fullscreenchange',()=>{if(VR.on&&VR.fs&&!document.fullscreenElement)exitVR();});
 window.addEventListener('keydown',e=>{if(!VR.on)return;if(e.key===' '||e.key==='Enter'){VR.moving=!VR.moving;e.preventDefault();}else if(e.key==='Escape')exitVR();});
 let presetsReady=false;const presetBy={grove:0,gabor:0,portrait:0};
-const S={nest:1,col:0,stereo:0,depth:0.4,swap:false,scene:'grove',spread:0,spreadEff:0,psweep:0,psAmp:0,psPhase:0,sigma:1,sf:1,sfEff:1,sweep:0,sweepAmp:0,sweepPhase:0,con:1,conEff:1,csweep:0,csAmp:0,csPhase:0,theta:0,speed:6,playing:!reduce,wave:0,waveT:0,axis:0,carrier:1,carrierT:1,env:0,auto:!reduce,idle:99};
+const S={nest:1,col:0,stereo:0,depth:0.4,swap:false,scene:'grove',spread:0,spreadEff:0,bsweep:0,bsAmp:0,bsPhase:0,sigEff:1,sat:0,psweep:0,psAmp:0,psPhase:0,sigma:1,sf:1,sfEff:1,sweep:0,sweepAmp:0,sweepPhase:0,con:1,conEff:1,csweep:0,csAmp:0,csPhase:0,theta:0,speed:6,playing:!reduce,wave:0,waveT:0,axis:0,carrier:1,carrierT:1,env:0,auto:!reduce,idle:99};
 let W=1,Hh=1,scale=Math.min(window.devicePixelRatio||1,2),dockShift=0,dockSm=0,drawerTy=0;
 const dock=document.getElementById('dock');
 function resize(){
@@ -861,16 +946,16 @@ new ResizeObserver(resize).observe(canvas);resize();
 const drawer=(function(){
   const grip=document.getElementById('grip'),body=document.getElementById('dockBody'),first=dock.querySelector('.row');
   let open=false,maxTy=0,drag=null;
-  const peek=()=>grip.offsetHeight+first.offsetHeight+12;
   function place(v){drawerTy=clamp(v,0,maxTy);dock.style.setProperty('--ty',drawerTy+'px');resize();}
-  function set(o){open=o;maxTy=Math.max(0,dock.offsetHeight-peek());dock.classList.remove('drag');place(o?0:maxTy);grip.setAttribute('aria-expanded',String(o));body.inert=!o;}
-  grip.addEventListener('pointerdown',e=>{grip.setPointerCapture(e.pointerId);maxTy=Math.max(0,dock.offsetHeight-peek());drag={y:e.clientY,t0:drawerTy,moved:0,last:e.clientY,v:0};dock.classList.add('drag');});
+  function set(o){open=o;maxTy=dock.offsetHeight;dock.classList.remove('drag');place(o?0:maxTy);grip.setAttribute('aria-expanded',String(o));dock.classList.toggle('open',o);body.inert=first.inert=$('dockClose').inert=!o;}
+  grip.addEventListener('pointerdown',e=>{grip.setPointerCapture(e.pointerId);maxTy=dock.offsetHeight;drag={y:e.clientY,t0:drawerTy,moved:0,last:e.clientY,v:0};dock.classList.add('drag');});
   grip.addEventListener('pointermove',e=>{if(!drag)return;drag.v=e.clientY-drag.last;drag.last=e.clientY;drag.moved=Math.max(drag.moved,Math.abs(e.clientY-drag.y));place(drag.t0+e.clientY-drag.y);});
   const end=e=>{if(!drag)return;const d=drag;drag=null;
     if(e.type==='pointerup'&&d.moved<6)set(!open);                       // a tap toggles
     else set(Math.abs(d.v)>4?d.v<0:drawerTy<maxTy*0.5);};                 // a flick decides, otherwise the nearer stop
   grip.addEventListener('pointerup',end);grip.addEventListener('pointercancel',end);
   grip.addEventListener('click',e=>{if(e.detail===0)set(!open);});        // keyboard
+  document.getElementById('dockClose').addEventListener('click',()=>set(false));
   new ResizeObserver(()=>{if(!drag)set(open);}).observe(dock);
   return{set:set};
 })();
@@ -915,18 +1000,28 @@ const sweepRate=v=>v===0?0:(1/60)*Math.pow(20,(v-1)/99);
 $('con').addEventListener('input',e=>{S.con=Math.pow(10,-2+2*(+e.target.value)/100);});
 $('csweep').addEventListener('input',e=>{const v=+e.target.value;S.csweep=sweepRate(v);if(v===0)S.csPhase=0;$('csweepOut').textContent=v===0?'off':Math.round(1/S.csweep)+' s';});
 $('pull').addEventListener('input',e=>{S.spread=+e.target.value/100;});
+$('bsweep').addEventListener('input',e=>{const v=+e.target.value;S.bsweep=sweepRate(v);if(v===0)S.bsPhase=0;$('bsweepOut').textContent=v===0?'off':Math.round(1/S.bsweep)+' s';});
+$('sat').addEventListener('input',e=>{S.sat=+e.target.value/100;$('satOut').textContent=e.target.value+'%';});
 $('col').addEventListener('input',e=>{S.col=+e.target.value/100;$('colOut').textContent=e.target.value+'%';});
 /* ---------- portrait: a Scaniverse Gaussian-splat scan, loaded on demand and turned into Gabor splats ----------
    Each Gaussian keeps its position, shape, colour and opacity. On top it gets the one shared, phase-locked carrier,
    so the stripes run through the head as parallel sheets and show on the skin like engraving lines. */
-let portraitLoad=null;
+let portraitLoad=null,portraitOwn=false;
+// build the portrait scene from n Gaussians; get(i) returns {p, long, short, s:[long,mid,short], c, a} in page units
+function ingestScan(n,get){
+  const K=[0,TAU/0.09,0],d=0.3;
+  if(SC.portrait)gl.deleteTexture(SC.portrait.tex);
+  N=0;
+  for(let i=0;i<n;i++){const g=get(i),c=g.c;
+    splat(g.p,g.long,g.short,g.s[0],g.s[1],g.s[2],[Math.min(1,c[0]*(1+d)),Math.min(1,c[1]*(1+d)),Math.min(1,c[2]*(1+d))],mul(c,1-d),g.a,K,0,1,0,0,1);}
+  SC.portrait=finalizeScene();
+}
 function loadPortrait(){
   if(portraitLoad)return portraitLoad;
   // the scan ships as base64 inside a JSON file, because some hosts will not serve raw binary
   portraitLoad=fetch('portrait.json').then(r=>{if(!r.ok)throw new Error('scan missing');return r.json();}).then(j=>{
     const bin=atob(j.data),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
-    const buf=u8.buffer;
-    const dv=new DataView(buf),n=dv.getUint32(0,true),rng=dv.getFloat32(4,true);
+    const buf=u8.buffer,dv=new DataView(buf),n=dv.getUint32(0,true),rng=dv.getFloat32(4,true);
     let o=8;
     const P=new Int16Array(buf,o,n*3);o+=n*6;
     const Sc=new Uint8Array(buf,o,n*3);o+=n*3;
@@ -934,21 +1029,59 @@ function loadPortrait(){
     const Sh=new Int8Array(buf,o,n*3);o+=n*3;
     const C=new Uint8Array(buf,o,n*3);o+=n*3;
     const A=new Uint8Array(buf,o,n);
-    const K=[0,TAU/0.09,0],d=0.3;
-    N=0;
-    for(let i=0;i<n;i++){
-      const c=[C[i*3]/255,C[i*3+1]/255,C[i*3+2]/255];
-      splat([P[i*3]/32767*rng,P[i*3+1]/32767*rng,P[i*3+2]/32767*rng],[L[i*3],L[i*3+1],L[i*3+2]],[Sh[i*3],Sh[i*3+1],Sh[i*3+2]],
-        Math.exp(Sc[i*3]/16-10),Math.exp(Sc[i*3+1]/16-10),Math.exp(Sc[i*3+2]/16-10),
-        [Math.min(1,c[0]*(1+d)),Math.min(1,c[1]*(1+d)),Math.min(1,c[2]*(1+d))],mul(c,1-d),A[i]/255,K,0,1,0,0,1);
-    }
-    SC.portrait=finalizeScene();
+    ingestScan(n,i=>({p:[P[i*3]/32767*rng,P[i*3+1]/32767*rng,P[i*3+2]/32767*rng],long:[L[i*3],L[i*3+1],L[i*3+2]],short:[Sh[i*3],Sh[i*3+1],Sh[i*3+2]],
+      s:[Math.exp(Sc[i*3]/16-10),Math.exp(Sc[i*3+1]/16-10),Math.exp(Sc[i*3+2]/16-10)],c:[C[i*3]/255,C[i*3+1]/255,C[i*3+2]/255],a:A[i]/255}));
   });
   return portraitLoad;
 }
+/* A visitor's own Scaniverse scan (.spz), decoded entirely in the browser: nothing is uploaded anywhere.
+   SPZ is a gzip stream: a 16-byte header, then positions (24-bit fixed point), alphas, colours, log scales and rotations. */
+const SCAN_MAX=70000;
+async function readSpz(file){
+  if(!window.DecompressionStream)throw new Error('This browser cannot unpack .spz files.');
+  let raw;
+  try{raw=new Uint8Array(await new Response(file.stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());}
+  catch(err){throw new Error('That is not a Scaniverse .spz splat file.');}
+  const dv=new DataView(raw.buffer);
+  if(raw.length<16||dv.getUint32(0,true)!==0x5053474e)throw new Error('That is not a Scaniverse .spz splat file.');
+  const ver=dv.getUint32(4,true),n=dv.getUint32(8,true),shDim=[0,3,8,15][raw[12]]||0,fb=raw[13],rb=ver>=3?4:3;
+  if(ver<2||ver>3)throw new Error('This .spz is version '+ver+'; only versions 2 and 3 are supported.');
+  if(raw.length<16+n*(16+rb+shDim*3))throw new Error('The .spz file is incomplete.');
+  const oP=16,oA=oP+n*9,oC=oA+n,oS=oC+n*3,oR=oS+n*3,fx=1/(1<<fb);
+  const pos=i=>{const o=oP+i*9,r=[0,0,0];for(let k=0;k<3;k++){let v=raw[o+k*3]|(raw[o+k*3+1]<<8)|(raw[o+k*3+2]<<16);if(v&0x800000)v-=0x1000000;r[k]=v*fx;}return r;};
+  // keep the most opaque splats if there are too many
+  let keep=[];for(let i=0;i<n;i++)if(raw[oA+i]>25)keep.push(i);
+  if(keep.length>SCAN_MAX){keep.sort((a,b)=>raw[oA+b]-raw[oA+a]);keep.length=SCAN_MAX;}
+  if(keep.length<50)throw new Error('The scan has too few visible splats.');
+  // centre on the median, scale so nearly everything fits the usual view
+  const med=k=>{const v=keep.map(i=>pos(i)[k]).sort((a,b)=>a-b);return v[v.length>>1];},ctr=[med(0),med(1),med(2)];
+  const far=keep.map(i=>{const q=pos(i);return Math.max(Math.abs(q[0]-ctr[0]),Math.abs(q[1]-ctr[1]),Math.abs(q[2]-ctr[2]));}),dev=far.slice().sort((a,b)=>a-b);
+  const ext=dev[Math.floor(dev.length*0.9)]||1,Ks=2.2/ext;
+  keep=keep.filter((i,j)=>far[j]<=ext*1.6);   // drop stray far-off splats, such as a scan's sky shell
+  ingestScan(keep.length,j=>{
+    const i=keep[j],q=pos(i),sc=[0,1,2].map(k=>Math.exp(raw[oS+i*3+k]/16-10)*Ks);
+    let x,y,z,w;
+    if(rb===3){x=raw[oR+i*3]/127.5-1;y=raw[oR+i*3+1]/127.5-1;z=raw[oR+i*3+2]/127.5-1;w=Math.sqrt(Math.max(0,1-x*x-y*y-z*z));}
+    else{let u=dv.getUint32(oR+i*4,true);const big=u>>>30,qq=[0,0,0,0];let ss=0;
+      for(let k=3;k>=0;k--){if(k===big)continue;const m=(u&511)/511*Math.SQRT1_2,v=((u>>>9)&1)?-m:m;qq[k]=v;ss+=v*v;u>>>=10;}
+      qq[big]=Math.sqrt(Math.max(0,1-ss));x=qq[0];y=qq[1];z=qq[2];w=qq[3];}
+    const R=[[1-2*(y*y+z*z),2*(x*y+z*w),2*(x*z-y*w)],[2*(x*y-z*w),1-2*(x*x+z*z),2*(y*z+x*w)],[2*(x*z+y*w),2*(y*z-x*w),1-2*(x*x+y*y)]];   // R[k] = local axis k
+    const ord=[0,1,2].sort((a,b)=>sc[b]-sc[a]);
+    return{p:[(q[0]-ctr[0])*Ks,(q[1]-ctr[1])*Ks,(q[2]-ctr[2])*Ks],long:R[ord[0]],short:R[ord[2]],s:[sc[ord[0]],sc[ord[1]],sc[ord[2]]],
+      c:[0,1,2].map(k=>clamp(0.5+0.2820948*((raw[oC+i*3+k]/255-0.5)/0.15),0,1)),a:raw[oA+i]/255};
+  });
+}
+const scanInput=document.createElement('input');scanInput.type='file';scanInput.accept='.spz';scanInput.hidden=true;document.body.appendChild(scanInput);
+scanInput.addEventListener('change',()=>{
+  const f=scanInput.files&&scanInput.files[0];if(!f)return;
+  $('count').textContent='Reading your scan…';
+  readSpz(f).then(()=>{portraitLoad=Promise.resolve();portraitOwn=true;cams.portrait.yaw=0;cams.portrait.pitch=0.04;cams.portrait.dist=8.2;cams.portrait.target=[0,0,0];setScene('portrait',true);})
+    .catch(err=>{$('count').textContent=err&&err.message?err.message:'That scan could not be read.';});
+  scanInput.value='';
+});
 function caption(){
   const nn=SC[S.scene].N.toLocaleString('en-US');
-  $('count').textContent=S.scene==='portrait'?nn+' Gabor splats from a phone scan · drag to orbit':S.scene!=='gabor'?nn+' Gabor splats · drag to orbit, pinch to zoom':
+  $('count').textContent=S.scene==='portrait'?nn+(portraitOwn?' Gabor splats from your scan · it stays on this device':' Gabor splats from a phone scan · drag to orbit'):S.scene!=='gabor'?nn+' Gabor splats · drag to orbit, pinch to zoom':
     S.nest>1?'Gabors made of Gabors, '+S.nest+' scales deep · '+Math.pow(8,S.nest-1).toLocaleString('en-US')+' at the bottom':'1 big Gabor made of '+nn+' small Gabors · drag to orbit';
 }
 $('nest').addEventListener('input',e=>{S.nest=+e.target.value;$('nestOut').textContent=S.nest===1?'classic':S.nest+' scales';caption();});
@@ -964,7 +1097,7 @@ function setScene(name,quiet){
   $('axisSurface').checked=S.axis===0;$('axisWorld').checked=S.axis===1;
   $('tabGrove').checked=name==='grove';$('tabGabor').checked=name==='gabor';$('tabPortrait').checked=name==='portrait';
   document.body.classList.toggle('gabor',name==='gabor');document.body.classList.toggle('portrait',name==='portrait');
-  $('pullRow').hidden=$('psRow').hidden=$('nestRow').hidden=name!=='gabor';
+  $('pullRow').hidden=$('psRow').hidden=name==='grove';$('nestRow').hidden=name!=='gabor';$('satRow').hidden=name!=='portrait';
   caption();
   if(presetsReady){renderPresets();applyPreset(presetBy[name]);}
   canvas.setAttribute('aria-label',name==='gabor'?'One large 3D Gabor on a gray field, built from small 3D Gabor splats. Drag to orbit, pinch or scroll to zoom.':'A grove of mushrooms rendered with 3D Gabor splats. Drag to orbit, pinch or scroll to zoom.');
@@ -1001,6 +1134,11 @@ function frame(now){
   S.sweepAmp+=((S.sweep>0?1:0)-S.sweepAmp)*Math.min(1,dt*2.5);
   S.sfEff=S.sf*Math.pow(2,S.sweepAmp*Math.sin(S.sweepPhase));
   $('sfOut').textContent=S.sfEff.toFixed(2)+'×';
+  // point-spread sweep: every envelope swells and shrinks together, on a log axis, around the slider value
+  if(S.playing)S.bsPhase+=TAU*S.bsweep*dt;
+  S.bsAmp+=((S.bsweep>0?1:0)-S.bsAmp)*Math.min(1,dt*2.5);
+  S.sigEff=S.sigma*Math.pow(2.4,S.bsAmp*Math.sin(S.bsPhase));
+  $('psfOut').textContent=S.sigEff.toFixed(2)+'×';
   // contrast sweep: log-sinusoid between the slider value (peak) and a 1% floor
   if(S.playing)S.csPhase+=TAU*S.csweep*dt;
   S.csAmp+=((S.csweep>0?1:0)-S.csAmp)*Math.min(1,dt*2.5);
@@ -1022,7 +1160,7 @@ function frame(now){
 }
 function draw(t){
   const cp=Math.cos(cam.pitch),sp=Math.sin(cam.pitch);
-  const isG=S.scene==='gabor',fr=isG&&S.nest>1,sc=fr?SC.fract:SC[S.scene],spread=isG?S.spreadEff:0,dist=cam.dist*(fr?nestZoom():1+spread*2.4),tgt=fr?nestTarget():cam.target;
+  const isG=S.scene==='gabor',fr=isG&&S.nest>1,sc=fr?SC.fract:SC[S.scene],spread=(isG||S.scene==='portrait')?S.spreadEff:0,dist=cam.dist*(fr?nestZoom():1+spread*2.4),tgt=fr?nestTarget():cam.target;
   const pos=[tgt[0]+dist*cp*Math.sin(cam.yaw),tgt[1]+dist*sp,tgt[2]+dist*cp*Math.cos(cam.yaw)];
   if(S.scene==='grove'){const gmin=ground(pos[0],pos[2])+0.22;if(pos[1]<gmin)pos[1]=gmin;}
   const fw=norm(sub3(tgt,pos)),rt=norm(cross(fw,[0,1,0])),upv=cross(rt,fw);
@@ -1043,7 +1181,7 @@ function draw(t){
   gl.uniform3f(U.uCamPos,pos[0],pos[1],pos[2]);gl.uniform3f(U.uR,rt[0],rt[1],rt[2]);gl.uniform3f(U.uU,upv[0],upv[1],upv[2]);gl.uniform3f(U.uF,fw[0],fw[1],fw[2]);
   gl.uniform2f(U.uViewport,W,Hh);const yoff=portrait?dockSm*0.9:dockSm*0.45;
   const focal=0.5*Math.min(Hh,W*1.45)/Math.tan(24*Math.PI/180);gl.uniform1f(U.uFocal,focal);gl.uniform1f(U.uGray,st?1:0);
-  gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,fr?0:spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff*(fr?nestSF():1));gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,S.scene==='grove'?0.10:0);
+  gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,fr?0:spread);gl.uniform1f(U.uSigma,S.sigEff);gl.uniform1f(U.uPort,S.scene==='portrait'?1:0);gl.uniform1f(U.uSat,S.scene==='portrait'?S.sat:1);gl.uniform1f(U.uSF,S.sfEff*(fr?nestSF():1));gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,S.scene==='grove'?0.10:0);
   if(!st){gl.uniform2f(U.uOffset,0,yoff);gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,vis);}
   else{
     // off-axis stereo pair: eyes sit either side of the camera, frusta sheared so the orbit target has zero disparity
@@ -1065,7 +1203,7 @@ function draw(t){
   }
 }
 function drawVR(t,dt){
-  const isG=S.scene==='gabor',fr=isG&&S.nest>1,sc=fr?SC.fract:SC[S.scene],spread=isG?S.spreadEff:0,P=VR.pos[S.scene];
+  const isG=S.scene==='gabor',fr=isG&&S.nest>1,sc=fr?SC.fract:SC[S.scene],spread=(isG||S.scene==='portrait')?S.spreadEff:0,P=VR.pos[S.scene];
   // head pose: sensor quaternion with a yaw offset, or drag-to-look when no sensor reports
   let rt,upv,fw;
   if(VR.q){const h=VR.yawOff/2,q=qmul([0,Math.sin(h),0,Math.cos(h)],VR.q);rt=qrot(q,[1,0,0]);upv=qrot(q,[0,1,0]);fw=qrot(q,[0,0,-1]);}
@@ -1100,7 +1238,7 @@ function drawVR(t,dt){
   gl.uniform2f(U.uViewport,hw,Hh);gl.uniform2f(U.uOffset,0,0);gl.uniform1f(U.uFocal,focal);gl.uniform1f(U.uGray,0);
   
   gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);
-  gl.uniform1f(U.uSpread,fr?0:spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff*(fr?nestSF():1));gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform1f(U.uFogK,S.scene==='grove'?0.10:0);
+  gl.uniform1f(U.uSpread,fr?0:spread);gl.uniform1f(U.uSigma,S.sigEff);gl.uniform1f(U.uPort,S.scene==='portrait'?1:0);gl.uniform1f(U.uSat,S.scene==='portrait'?S.sat:1);gl.uniform1f(U.uSF,S.sfEff*(fr?nestSF():1));gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform1f(U.uFogK,S.scene==='grove'?0.10:0);
   gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);
   for(let e=0;e<2;e++){
     const sg=e===0?-1:1,h=sg*VR.ipd/2;
@@ -1116,6 +1254,25 @@ function drawVR(t,dt){
     gl.enable(gl.BLEND);gl.useProgram(prog);
   }
 }
+/* ---------- WTF: a plain-words explainer ---------- */
+let wtfDrawn=false,wtfFrom=null;
+function wtfFigures(){
+  if(wtfDrawn)return;wtfDrawn=true;
+  const fig=(id,fn)=>{const c=$(id),n=c.width,x=c.getContext('2d'),im=x.createImageData(n,n),ca=Math.cos(0.6),sa=Math.sin(0.6);
+    for(let j=0;j<n;j++)for(let i=0;i<n;i++){const u=(i-n/2)/(n/2),v=(j-n/2)/(n/2),e=Math.exp(-(u*u+v*v)/(2*0.4*0.4)),w=Math.cos((u*ca+v*sa)*Math.PI*3.4),g=Math.round(255*clamp(0.5+0.5*fn(e,w),0,1)),o=(j*n+i)*4;
+      im.data[o]=im.data[o+1]=im.data[o+2]=g;im.data[o+3]=255;}
+    x.putImageData(im,0,0);};
+  fig('wtfA',(e,w)=>e);fig('wtfB',(e,w)=>w);fig('wtfC',(e,w)=>e*w);
+}
+function wtfSet(open){
+  if(open===!$('wtf').hidden)return;
+  if(open){wtfFrom=document.activeElement;wtfFigures();$('wtf').hidden=false;$('wtf').scrollTop=0;$('wtfClose').focus();}
+  else{$('wtf').hidden=true;if(wtfFrom&&wtfFrom.focus)wtfFrom.focus();}
+}
+$('wtfBtn').addEventListener('click',()=>wtfSet(true));
+$('wtfClose').addEventListener('click',()=>wtfSet(false));
+$('wtf').addEventListener('click',e=>{if(e.target===$('wtf'))wtfSet(false);});
+window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('wtf').hidden)wtfSet(false);});
 /* ---------- presets: each tab opens in its first one ---------- */
 const PRESETS={
   grove:[
@@ -1134,29 +1291,34 @@ const PRESETS={
     {name:'Swarm',speed:20,pull:70,psf:-25,sf:40},
     {name:'Classic',speed:6,world:1}],
   portrait:[
+    {name:'Assemble',speed:5,world:1,pull:100,ps:58},
+    {name:'Trip',speed:16,world:1,wave:1,sf:-10,sweep:60,col:100,bs:62,pull:55,ps:45},
+    {name:'Breathe',speed:6,world:1,bs:70,sf:-20},
     {name:'Engraved',speed:2,world:1,con:85},
-    {name:'Faithful',speed:0,world:1,con:0},
     {name:'Kaleidoscope',speed:12,world:1,wave:1,sf:-10,sweep:55,col:80},
-    {name:'Pointillist',speed:6,world:1,psf:-55,sf:20,col:40},
+    {name:'Pointillist',speed:6,world:1,psf:-55,sf:20,col:40,sat:100},
     {name:'Shatter',speed:14},
-    {name:'Melt',speed:9,wave:1,world:1,env:1}]
+    {name:'Melt',speed:9,wave:1,world:1,env:1},
+    {name:'In color',speed:2,world:1,con:85,sat:100},
+    {name:'Faithful',speed:0,world:1,con:0,sat:100}]
 };
-function markPreset(i){const b=$('presets').children;for(let k=0;k<b.length;k++)b[k].setAttribute('aria-pressed',String(k===i));}
+function markPreset(i){const b=$('presets').children;for(let k=0;k<PRESETS[S.scene].length&&k<b.length;k++)b[k].setAttribute('aria-pressed',String(k===i));}
 function renderPresets(){
   const box=$('presets');box.textContent='';
   PRESETS[S.scene].forEach((p,i)=>{const b=document.createElement('button');b.type='button';b.textContent=p.name;b.addEventListener('click',()=>applyPreset(i));box.appendChild(b);});
+  if(S.scene==='portrait'){const b=document.createElement('button');b.type='button';b.textContent='+ Your scan';b.title='Open a Scaniverse .spz file. It is read on this device and not uploaded.';b.addEventListener('click',()=>scanInput.click());box.appendChild(b);}
 }
 function applyPreset(i){
   const p=PRESETS[S.scene][i];if(!p)return;presetBy[S.scene]=i;
   const setV=(id,v)=>{const e=$(id);e.value=v;e.dispatchEvent(new Event('input'));};
   const pick=id=>{const e=$(id);e.checked=true;e.dispatchEvent(new Event('change'));};
   const setC=(id,on)=>{const e=$(id);if(e.checked!==on){e.checked=on;e.dispatchEvent(new Event('change'));}};
-  setV('speed',p.speed);setV('psf',p.psf||0);setV('sf',p.sf||0);setV('sweep',p.sweep||0);
+  setV('speed',p.speed);setV('psf',p.psf||0);setV('bsweep',p.bs||0);setV('sat',p.sat||0);setV('sf',p.sf||0);setV('sweep',p.sweep||0);
   setV('con',p.con===undefined?100:p.con);setV('csweep',p.cs||0);setV('pull',p.pull||0);setV('psweep',p.ps||0);setV('col',p.col||0);setV('nest',p.nest||1);
   if(p.view){cam.yaw=p.view[0];cam.pitch=p.view[1];cam.dist=p.view[2];}else if(S.scene==='gabor'){cam.yaw=0;cam.pitch=0;cam.dist=10;}
   pick(p.wave?'spinWave':'spinTogether');pick(p.world?'axisWorld':'axisSurface');
   setC('env',!!p.env);setC('carriers',true);
-  S.sweepPhase=0;S.csPhase=0;S.psPhase=0;
+  S.sweepPhase=0;S.csPhase=0;S.psPhase=0;S.bsPhase=0;
   markPreset(i);
 }
 // a hand-made change means the view no longer matches a preset
@@ -1174,7 +1336,7 @@ drawer.set(window.innerWidth>700);
         MIDI CC 40.. (one per output), when MIDI is connected */
 const CV_IN=[['speed','speed','Rotation speed'],['pointSpread','psf','Point spread'],['spatialFreq','sf','Spatial frequency'],['sfSweep','sweep','SF sweep'],
   ['colorByAngle','col','Color by angle'],['contrast','con','Contrast'],['contrastSweep','csweep','Contrast sweep'],['pullApart','pull','Pull apart'],
-  ['pullSweep','psweep','Pull sweep'],['nesting','nest','Nesting'],['depth3d','depth','3D depth'],['lens','lens','Lens correction'],['angle',null,'Carrier angle'],['scene',null,'Tab']];
+  ['pullSweep','psweep','Pull sweep'],['nesting','nest','Nesting'],['depth3d','depth','3D depth'],['lens','lens','Lens correction'],['angle',null,'Carrier angle'],['scene',null,'Tab'],['spreadSweep','bsweep','Spread sweep'],['scanColor','sat','Scan color']];
 const CV_OUT=['angle','angleSin','spatialFreq','contrast','pullApart'];
 const CV={base:{},mod:{},dirty:new Set(),peers:new Set(),bc:null,midi:null,lastIn:0,lastOut:0,count:0,sent:{}};
 const cvEl=name=>{const r=CV_IN.find(x=>x[0]===name);return r&&r[1]?$(r[1]):null;};
