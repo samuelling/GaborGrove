@@ -8,17 +8,21 @@ VR head tracking needs the page served over HTTPS as a top-level page (for examp
 
 ## Tabs
 
-- **Mushroom grove** — a procedural twilight grove of about 35,000 Gabor splats. Gills, cap striations, stem fibres, bark, growth rings and fern leaflets all come from carriers, not from extra splats.
-- **Gabor of Gabors** — one large 3D Gabor on a mean-gray field, built from 1,290 small phase-locked Gabor splats on a jittered lattice.
+The page opens on Portrait; `#gabor` or `#grove` in the address opens that tab instead.
+
 - **Portrait** — a head-and-shoulders Gaussian-splat scan from a phone (Scaniverse), loaded on demand from `portrait.json` and rendered as Gabor splats. Each Gaussian keeps its position, shape, colour and opacity, and all of them share one phase-locked carrier, so the stripes cut through the head as parallel sheets and show on the surface like engraving lines.
+- **Gabor of Gabors** — one large 3D Gabor on a mean-gray field, built from 1,290 small phase-locked Gabor splats on a jittered lattice.
+- **Mushroom grove** — a procedural twilight grove of about 35,000 Gabor splats. Gills, cap striations, stem fibres, bark, growth rings and fern leaflets all come from carriers, not from extra splats.
 
 ## Presets
 
 Each tab opens in its first preset; the pills under the tabs switch between them. A preset just sets the controls below, and changing any control by hand clears the highlight.
 
-- **Mushroom grove** — Kaleidoscope (default), Zebra, Pointillist, Jitter, Melt, Pulse, Calm. Jitter turns on size and SF variance with a slow redraw; it is in every tab.
-- **Gabor of Gabors** — Assemble (default), Nested, Jitter, Twist, Shatter, Zoom, Swarm, Classic. Nested runs the multi-scale cascade described under Nesting. Assemble starts with the small Gabors pulled apart, draws them together into the one big Gabor, holds, and repeats.
-- **Portrait** — Assemble (default), Trip, Breathe, Jitter, Engraved, Kaleidoscope, Pointillist, Shatter, Melt, In color, Faithful. All but Pointillist, In color and Faithful are grayscale. Assemble starts as a cloud of separate Gabor patches and draws them together into the face; Trip sweeps pull, point spread and spatial frequency at once with angle-driven colour; Breathe sweeps the point spread; Faithful fades the carriers out, so it is the plain scan in colour.
+- **Mushroom grove** — Kaleidoscope (default), Zebra, Pointillist, Jitter, Boil, Static, Lava, Moiré, Melt, Pulse, Calm.
+- **Gabor of Gabors** — Assemble (default), Nested, Jitter, Cohere, Static, Boil, Lava, Fuzz, Twist, Shatter, Zoom, Swarm, Classic. Nested runs the multi-scale cascade described under Nesting. Assemble starts with the small Gabors pulled apart, draws them together into the one big Gabor, holds, and repeats.
+- **Portrait** — Assemble (default), Trip, Breathe, Jitter, Cohere, Static, Boil, Ghost, Lava, Engraved, Kaleidoscope, Pointillist, Shatter, Melt, In color, Faithful. All but Pointillist, In color and Faithful are grayscale. Assemble starts as a cloud of separate Gabor patches and draws them together into the face; Trip sweeps pull, point spread and spatial frequency at once with angle-driven colour; Breathe sweeps the point spread; Faithful fades the carriers out, so it is the plain scan in colour.
+
+The variance presets: **Jitter** turns on size and SF variance with a slow redraw. **Cohere** starts as a cloud of patches that all differ in size and stripe width, and draws them together into one clean whole as the variance closes. **Static** redraws every patch four times a second with the widest SF spread. **Boil** is size variance redrawn fast. **Lava** is slow, soft and coloured by angle. **Fuzz** (Gabor of Gabors) adds variance to the nested cascade, **Ghost** (Portrait) is large soft blobs drifting in size, and **Moiré** (grove) sweeps SF variance open and shut under a wave rotation.
 
 ## Make your own portrait
 

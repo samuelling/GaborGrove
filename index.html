@@ -30,6 +30,8 @@ html,body{height:100%;margin:0}
 body{background:var(--night);color:var(--cream);font-family:var(--ui);font-size:14px;line-height:1.35;overflow:hidden;overscroll-behavior:none;-webkit-font-smoothing:antialiased}
 #stage{position:fixed;inset:0;background:linear-gradient(180deg,#070d18 0%,#0f2030 30%,var(--fog) 55%,#12201f 72%,var(--soil) 100%)}
 #gl{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+body.booting .presets{visibility:hidden}
+body.booting #stage{background:radial-gradient(ellipse at 50% 42%,#2b333b 0%,#141a20 62%,#090d11 100%)}
 #gl:active{cursor:grabbing}
 header{position:fixed;top:0;left:0;padding:14px 16px;pointer-events:none;display:flex;flex-direction:column;gap:2px;text-shadow:0 1px 10px rgba(0,0,0,.7)}
 h1{font-family:var(--display);font-style:italic;font-weight:500;font-size:26px;line-height:1.05;margin:0;letter-spacing:.005em}
@@ -157,11 +159,11 @@ body.vr #gl{cursor:default}
 <div id="stage"><canvas id="gl" aria-label="A grove of mushrooms rendered with 3D Gabor splats. Drag to orbit, pinch or scroll to zoom."></canvas></div>
 <header>
   <h1>Gabor Grove</h1>
-  <p id="count">building the grove</p>
+  <p id="count">loading…</p>
   <div class="seg tabs" role="radiogroup" aria-label="Demo">
-    <label><input type="radio" name="scene" id="tabGrove" value="grove" checked><span>Mushroom grove</span></label>
+    <label><input type="radio" name="scene" id="tabPortrait" value="portrait" checked><span>Portrait</span></label>
     <label><input type="radio" name="scene" id="tabGabor" value="gabor"><span>Gabor of Gabors</span></label>
-    <label><input type="radio" name="scene" id="tabPortrait" value="portrait"><span>Portrait</span></label>
+    <label><input type="radio" name="scene" id="tabGrove" value="grove"><span>Mushroom grove</span></label>
   </div>
   <div class="presets" id="presets" role="group" aria-label="Presets"></div>
   <button id="wtfBtn" type="button" aria-haspopup="dialog" aria-label="WTF? What this is, explained">WTF?</button>
@@ -189,9 +191,9 @@ body.vr #gl{cursor:default}
     <p>The dial is the direction of the wave. It turns inside every splat at once, so the stripes rotate while the shapes stay put.</p>
     <h3>The tabs</h3>
     <dl>
-      <dt>Mushroom grove</dt><dd>About 35,000 Gabor splats placed by rules written in code. Nothing was scanned.</dd>
-      <dt>Gabor of Gabors</dt><dd>One big Gabor built from small ones. Their waves are lined up so that together they draw the big one's stripes. Nesting repeats the trick, Gabors inside Gabors.</dd>
       <dt>Portrait</dt><dd>A phone scan of a real person, with a wave laid through every blob. Pull it apart to see the separate patches. <strong>+ Make your own</strong> in that tab shows how to scan someone yourself.</dd>
+      <dt>Gabor of Gabors</dt><dd>One big Gabor built from small ones. Their waves are lined up so that together they draw the big one's stripes. Nesting repeats the trick, Gabors inside Gabors.</dd>
+      <dt>Mushroom grove</dt><dd>About 35,000 Gabor splats placed by rules written in code. Nothing was scanned.</dd>
     </dl>
     <h3>The controls</h3>
     <dl>
@@ -1325,18 +1327,27 @@ $('howClose').addEventListener('click',()=>howSet(false));
 $('how').addEventListener('click',e=>{if(e.target===$('how'))howSet(false);});
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('how').hidden)howSet(false);});
 function caption(){
+  if(document.body.classList.contains('booting')){$('count').textContent='Loading the portrait…';return;}
   const nn=SC[S.scene].N.toLocaleString('en-US');
   $('count').textContent=S.scene==='portrait'?nn+(portraitOwn?' Gabor splats from your scan · never uploaded':' Gabor splats from a phone scan · drag to orbit'):S.scene!=='gabor'?nn+' Gabor splats · drag to orbit, pinch to zoom':
     S.nest>1?'Gabors made of Gabors, '+S.nest+' scales deep · '+Math.pow(8,S.nest-1).toLocaleString('en-US')+' at the bottom':'1 big Gabor made of '+nn+' small Gabors · drag to orbit';
 }
 $('nest').addEventListener('input',e=>{S.nest=+e.target.value;$('nestOut').textContent=S.nest===1?'classic':S.nest+' scales';caption();});
 $('psweep').addEventListener('input',e=>{const v=+e.target.value;S.psweep=sweepRate(v);if(v===0)S.psPhase=0;$('psweepOut').textContent=v===0?'off':Math.round(1/S.psweep)+' s';});
+let wantScene='portrait',booting=false;
+const booted=()=>{booting=false;document.body.classList.remove('booting');};
 function setScene(name,quiet){
+  wantScene=name;
   if(name==='portrait'&&!SC.portrait){
     $('tabPortrait').checked=true;$('count').textContent='Loading the scan…';
-    loadPortrait().then(()=>setScene('portrait',quiet)).catch(()=>{portraitLoad=null;$('count').textContent='The scan could not be loaded.';$('tabPortrait').checked=false;$(S.scene==='gabor'?'tabGabor':'tabGrove').checked=true;});
+    // the scan is fetched on demand; if another tab is picked meanwhile, that choice stands
+    loadPortrait().then(()=>{if(wantScene==='portrait')setScene('portrait',quiet);}).catch(()=>{
+      portraitLoad=null;
+      if(wantScene==='portrait'){if(document.body.classList.contains('booting'))setScene('gabor',true);else $(S.scene==='gabor'?'tabGabor':'tabGrove').checked=true;}
+      $('count').textContent='The portrait scan could not be loaded.';}).finally(booted);
     return;
   }
+  booted();
   if(!SC[name])name='grove';
   S.scene=name;cam=cams[name];S.axis=axisBy[name];S.idle=99;
   $('axisSurface').checked=S.axis===0;$('axisWorld').checked=S.axis===1;
@@ -1345,12 +1356,14 @@ function setScene(name,quiet){
   $('pullRow').hidden=$('psRow').hidden=name==='grove';$('nestRow').hidden=name!=='gabor';$('satRow').hidden=name!=='portrait';
   caption();
   if(presetsReady){renderPresets();applyPreset(presetBy[name]);}
-  canvas.setAttribute('aria-label',name==='gabor'?'One large 3D Gabor on a gray field, built from small 3D Gabor splats. Drag to orbit, pinch or scroll to zoom.':'A grove of mushrooms rendered with 3D Gabor splats. Drag to orbit, pinch or scroll to zoom.');
+  canvas.setAttribute('aria-label',name==='gabor'?'One large 3D Gabor on a gray field, built from small 3D Gabor splats. Drag to orbit, pinch or scroll to zoom.':name==='portrait'?'A head-and-shoulders portrait scan rendered with 3D Gabor splats. Drag to orbit, pinch or scroll to zoom.':'A grove of mushrooms rendered with 3D Gabor splats. Drag to orbit, pinch or scroll to zoom.');
   if(!quiet){try{location.hash=name;}catch(err){}}
 }
 for(const el of document.querySelectorAll('input[name=scene]'))el.addEventListener('change',e=>{setScene(e.target.value);});
 window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if((SC[h]||h==='portrait')&&h!==S.scene)setScene(h,true);});
-setScene(location.hash==='#gabor'?'gabor':location.hash==='#portrait'?'portrait':'grove',true);
+// the page opens on the portrait; nothing is drawn until the scan has arrived, so the grove does not flash first.
+// (Drawing to a hidden canvas instead would queue every one of those frames, and the page would stall working through them.)
+{const h=location.hash.replace('#','');if(h==='gabor'||h==='grove')setScene(h,true);else{booting=true;document.body.classList.add('booting');setScene('portrait',true);}}
 // anaglyph: each eye's view is reduced to luminance and written to that eye's colour channels
 const EYES={1:['blue','green'],2:['red','cyan']};
 function stereoUI(){
@@ -1404,7 +1417,7 @@ function frame(now){
   dockSm+=(dockShift-dockSm)*Math.min(1,dt*9);
   S.idle+=dt;if(S.auto&&S.idle>2.5&&ptrs.size===0)cam.yaw+=S.scene==='gabor'?0.07*Math.sin((S.idle-2.5)*0.3)*dt:S.scene==='portrait'?0.13*Math.sin((S.idle-2.5)*0.3)*dt:0.045*dt;
   cvTick(now);
-  if(VR.on)drawVR(now/1000,dt);else draw(now/1000);
+  if(booting){}else if(VR.on)drawVR(now/1000,dt);else draw(now/1000);
   const deg=((S.theta*180/Math.PI)%360+360)%360;
   thetaOut.textContent=deg.toFixed(0)+'°';dial.style.transform='rotate('+deg.toFixed(1)+'deg)';
   requestAnimationFrame(frame);
@@ -1531,6 +1544,10 @@ const PRESETS={
     {name:'Zebra',speed:18,sf:-45},
     {name:'Pointillist',speed:6,psf:-70,sf:40,col:40},
     {name:'Jitter',speed:6,sv:40,fv:55,rd:45,col:50},
+    {name:'Boil',speed:8,sv:36,fv:30,rd:72,col:40},
+    {name:'Static',speed:22,psf:-45,sf:35,sv:35,fv:100,rd:96},
+    {name:'Lava',speed:3,wave:1,sf:-35,sv:34,fv:45,rd:22,col:100},
+    {name:'Moiré',speed:14,wave:1,world:1,fv:50,vs:40,sweep:45,col:70},
     {name:'Melt',speed:9,wave:1,world:1,env:1},
     {name:'Pulse',speed:4,sweep:70,cs:80},
     {name:'Calm',speed:6}],
@@ -1538,6 +1555,11 @@ const PRESETS={
     {name:'Assemble',speed:3,world:1,sf:50,pull:100,ps:62,view:[0,0,10]},
     {name:'Nested',speed:3,world:1,sf:50,nest:5,pull:100,ps:31,view:[0,0,10]},
     {name:'Jitter',speed:6,world:1,sv:55,fv:45,vs:55,rd:40,pull:50},
+    {name:'Cohere',speed:4,world:1,sf:30,pull:90,ps:50,sv:75,fv:75,vs:50,vph:Math.PI},
+    {name:'Static',speed:25,sf:40,psf:-20,pull:70,sv:40,fv:100,rd:100},
+    {name:'Boil',speed:5,world:1,pull:35,sv:100,rd:75},
+    {name:'Lava',speed:3,world:1,psf:40,pull:30,sv:80,rd:25,col:100},
+    {name:'Fuzz',speed:3,world:1,sf:50,nest:4,pull:100,ps:31,sv:50,fv:40,rd:40,view:[0,0,10]},
     {name:'Twist',speed:14,world:1,wave:1,col:70},
     {name:'Shatter',speed:16,col:60},
     {name:'Zoom',speed:8,world:1,sweep:77},
@@ -1548,6 +1570,11 @@ const PRESETS={
     {name:'Trip',speed:16,world:1,wave:1,sf:-10,sweep:60,col:100,bs:62,pull:55,ps:45},
     {name:'Breathe',speed:6,world:1,bs:70,sf:-20},
     {name:'Jitter',speed:5,world:1,sv:50,fv:45,vs:50,rd:45,pull:45},
+    {name:'Cohere',speed:5,world:1,pull:90,ps:50,sv:75,fv:75,vs:50,vph:Math.PI},
+    {name:'Static',speed:22,world:1,psf:-15,pull:65,sv:35,fv:100,rd:100},
+    {name:'Boil',speed:4,world:1,sv:95,rd:70,con:85},
+    {name:'Ghost',speed:3,world:1,psf:45,sf:-35,sv:90,rd:18},
+    {name:'Lava',speed:3,world:1,wave:1,psf:25,pull:25,sv:80,rd:25,col:100,sat:100},
     {name:'Engraved',speed:2,world:1,con:85},
     {name:'Kaleidoscope',speed:12,world:1,wave:1,sf:-10,sweep:55,col:80},
     {name:'Pointillist',speed:6,world:1,psf:-55,sf:20,col:40,sat:100},
@@ -1577,7 +1604,7 @@ function applyPreset(i){
   if(p.view){cam.yaw=p.view[0];cam.pitch=p.view[1];cam.dist=p.view[2];}else if(S.scene==='gabor'){cam.yaw=0;cam.pitch=0;cam.dist=10;}
   pick(p.wave?'spinWave':'spinTogether');pick(p.world?'axisWorld':'axisSurface');
   setC('env',!!p.env);setC('carriers',true);
-  S.sweepPhase=0;S.csPhase=0;S.psPhase=0;S.bsPhase=0;S.vsPhase=0;
+  S.sweepPhase=0;S.csPhase=0;S.psPhase=0;S.bsPhase=0;S.vsPhase=p.vph||0;   // vph starts the variance sweep wide open, so it can run against the pull sweep
   markPreset(i);
 }
 // a hand-made change means the view no longer matches a preset
