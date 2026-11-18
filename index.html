@@ -35,6 +35,7 @@ header{position:fixed;top:0;left:0;padding:14px 16px;pointer-events:none;display
 h1{font-family:var(--display);font-style:italic;font-weight:500;font-size:26px;line-height:1.05;margin:0;letter-spacing:.005em}
 .tabs{pointer-events:auto;align-self:flex-start;margin-top:10px;background:var(--panel);text-shadow:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 body.gabor #stage{background:rgb(128,128,128)}
+body.portrait #stage{background:radial-gradient(ellipse at 50% 42%,#2b333b 0%,#141a20 62%,#090d11 100%)}
 body.gabor.lin #stage{background:rgb(188,188,188)}
 body.gabor header{text-shadow:none}
 body.gabor h1{color:#0b1118}
@@ -116,6 +117,7 @@ body.vr #gl{cursor:default}
   <div class="seg tabs" role="radiogroup" aria-label="Demo">
     <label><input type="radio" name="scene" id="tabGrove" value="grove" checked><span>Mushroom grove</span></label>
     <label><input type="radio" name="scene" id="tabGabor" value="gabor"><span>Gabor of Gabors</span></label>
+    <label><input type="radio" name="scene" id="tabPortrait" value="portrait"><span>Portrait</span></label>
   </div>
   <div class="presets" id="presets" role="group" aria-label="Presets"></div>
 </header>
@@ -716,11 +718,11 @@ function sizeHDR(w,h){
   document.body.classList.toggle('lin',HDR.ok);
 }
 const vao=gl.createVertexArray();gl.bindVertexArray(vao);
-const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,Math.max(SC.grove.N,SC.gabor.N,32768)*4,gl.DYNAMIC_DRAW);
+const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,Math.max(SC.grove.N,SC.gabor.N,65536)*4,gl.DYNAMIC_DRAW);
 gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,1,gl.FLOAT,false,0,0);gl.vertexAttribDivisor(0,1);
 gl.disable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
 gl.uniform3f(U.uFog,0.115,0.205,0.25);
-const AXIS={grove:norm([0.42,0.80,0.43]),gabor:[0,0,1]};
+const AXIS={grove:norm([0.42,0.80,0.43]),gabor:[0,0,1],portrait:[0,0,1]};
 
 const counts=new Uint32Array(65537);
 function sortSplats(sc,cp,fw,k){
@@ -794,11 +796,12 @@ function fractalBuild(tg,viewR){
 /* ---------- camera and interaction ---------- */
 const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 const cams={grove:{yaw:-0.5,pitch:-0.03,dist:6.8,target:[0.1,1.3,0],pmin:-0.16,pmax:1.35,dmax:13},
-  gabor:{yaw:0,pitch:0,dist:10,target:[0,0,0],pmin:-1.45,pmax:1.45,dmax:24,dmin:0.25}};
-let cam=cams.grove;const axisBy={grove:0,gabor:1};
+  gabor:{yaw:0,pitch:0,dist:10,target:[0,0,0],pmin:-1.45,pmax:1.45,dmax:24,dmin:0.25},
+  portrait:{yaw:0,pitch:0.04,dist:7.2,target:[0,-0.25,0],pmin:-1.2,pmax:1.2,dmax:22,dmin:1.0}};
+let cam=cams.grove;const axisBy={grove:0,gabor:1,portrait:1};
 /* ---------- phone VR: side-by-side stereo, head tracking from the device orientation sensor ---------- */
 const VR={on:false,q:null,got:false,need:true,want:0,yawOff:0,pitch:0,moving:false,drift:false,lens:0.5,fs:false,wake:null,tap:null,t0:0,warned:false,
-  eye:1.25,ipd:0.064,pos:{grove:[-0.6,0,4.6],gabor:[0,0,6.5]}};
+  eye:1.25,ipd:0.064,pos:{grove:[-0.6,0,4.6],gabor:[0,0,6.5],portrait:[0,0,6]}};
 const qmul=(a,b)=>[a[3]*b[0]+a[0]*b[3]+a[1]*b[2]-a[2]*b[1],a[3]*b[1]-a[0]*b[2]+a[1]*b[3]+a[2]*b[0],a[3]*b[2]+a[0]*b[1]-a[1]*b[0]+a[2]*b[3],a[3]*b[3]-a[0]*b[0]-a[1]*b[1]-a[2]*b[2]];
 function qrot(q,v){const u=[q[0],q[1],q[2]],t=mul(cross(u,v),2);return add3(add3(v,mul(t,q[3])),cross(u,t));}
 // W3C device angles to a camera quaternion (y up, camera looks out of the back of the phone)
@@ -843,7 +846,7 @@ function exitVR(){
 }
 document.addEventListener('fullscreenchange',()=>{if(VR.on&&VR.fs&&!document.fullscreenElement)exitVR();});
 window.addEventListener('keydown',e=>{if(!VR.on)return;if(e.key===' '||e.key==='Enter'){VR.moving=!VR.moving;e.preventDefault();}else if(e.key==='Escape')exitVR();});
-let presetsReady=false;const presetBy={grove:0,gabor:0};
+let presetsReady=false;const presetBy={grove:0,gabor:0,portrait:0};
 const S={nest:1,col:0,stereo:0,depth:0.4,swap:false,scene:'grove',spread:0,spreadEff:0,psweep:0,psAmp:0,psPhase:0,sigma:1,sf:1,sfEff:1,sweep:0,sweepAmp:0,sweepPhase:0,con:1,conEff:1,csweep:0,csAmp:0,csPhase:0,theta:0,speed:6,playing:!reduce,wave:0,waveT:0,axis:0,carrier:1,carrierT:1,env:0,auto:!reduce,idle:99};
 let W=1,Hh=1,scale=Math.min(window.devicePixelRatio||1,2),dockShift=0,dockSm=0,drawerTy=0;
 const dock=document.getElementById('dock');
@@ -913,19 +916,51 @@ $('con').addEventListener('input',e=>{S.con=Math.pow(10,-2+2*(+e.target.value)/1
 $('csweep').addEventListener('input',e=>{const v=+e.target.value;S.csweep=sweepRate(v);if(v===0)S.csPhase=0;$('csweepOut').textContent=v===0?'off':Math.round(1/S.csweep)+' s';});
 $('pull').addEventListener('input',e=>{S.spread=+e.target.value/100;});
 $('col').addEventListener('input',e=>{S.col=+e.target.value/100;$('colOut').textContent=e.target.value+'%';});
+/* ---------- portrait: a Scaniverse Gaussian-splat scan, loaded on demand and turned into Gabor splats ----------
+   Each Gaussian keeps its position, shape, colour and opacity. On top it gets the one shared, phase-locked carrier,
+   so the stripes run through the head as parallel sheets and show on the skin like engraving lines. */
+let portraitLoad=null;
+function loadPortrait(){
+  if(portraitLoad)return portraitLoad;
+  portraitLoad=fetch('portrait.bin').then(r=>{if(!r.ok)throw new Error('scan missing');return r.arrayBuffer();}).then(buf=>{
+    const dv=new DataView(buf),n=dv.getUint32(0,true),rng=dv.getFloat32(4,true);
+    let o=8;
+    const P=new Int16Array(buf,o,n*3);o+=n*6;
+    const Sc=new Uint8Array(buf,o,n*3);o+=n*3;
+    const L=new Int8Array(buf,o,n*3);o+=n*3;
+    const Sh=new Int8Array(buf,o,n*3);o+=n*3;
+    const C=new Uint8Array(buf,o,n*3);o+=n*3;
+    const A=new Uint8Array(buf,o,n);
+    const K=[0,TAU/0.09,0],d=0.3;
+    N=0;
+    for(let i=0;i<n;i++){
+      const c=[C[i*3]/255,C[i*3+1]/255,C[i*3+2]/255];
+      splat([P[i*3]/32767*rng,P[i*3+1]/32767*rng,P[i*3+2]/32767*rng],[L[i*3],L[i*3+1],L[i*3+2]],[Sh[i*3],Sh[i*3+1],Sh[i*3+2]],
+        Math.exp(Sc[i*3]/16-10),Math.exp(Sc[i*3+1]/16-10),Math.exp(Sc[i*3+2]/16-10),
+        [Math.min(1,c[0]*(1+d)),Math.min(1,c[1]*(1+d)),Math.min(1,c[2]*(1+d))],mul(c,1-d),A[i]/255,K,0,1,0,0,1);
+    }
+    SC.portrait=finalizeScene();
+  });
+  return portraitLoad;
+}
 function caption(){
   const nn=SC[S.scene].N.toLocaleString('en-US');
-  $('count').textContent=S.scene!=='gabor'?nn+' Gabor splats · drag to orbit, pinch to zoom':
+  $('count').textContent=S.scene==='portrait'?nn+' Gabor splats from a phone scan · drag to orbit':S.scene!=='gabor'?nn+' Gabor splats · drag to orbit, pinch to zoom':
     S.nest>1?'Gabors made of Gabors, '+S.nest+' scales deep · '+Math.pow(8,S.nest-1).toLocaleString('en-US')+' at the bottom':'1 big Gabor made of '+nn+' small Gabors · drag to orbit';
 }
 $('nest').addEventListener('input',e=>{S.nest=+e.target.value;$('nestOut').textContent=S.nest===1?'classic':S.nest+' scales';caption();});
 $('psweep').addEventListener('input',e=>{const v=+e.target.value;S.psweep=sweepRate(v);if(v===0)S.psPhase=0;$('psweepOut').textContent=v===0?'off':Math.round(1/S.psweep)+' s';});
 function setScene(name,quiet){
+  if(name==='portrait'&&!SC.portrait){
+    $('tabPortrait').checked=true;$('count').textContent='Loading the scan…';
+    loadPortrait().then(()=>setScene('portrait',quiet)).catch(()=>{portraitLoad=null;$('count').textContent='The scan could not be loaded.';$('tabPortrait').checked=false;$(S.scene==='gabor'?'tabGabor':'tabGrove').checked=true;});
+    return;
+  }
   if(!SC[name])name='grove';
   S.scene=name;cam=cams[name];S.axis=axisBy[name];S.idle=99;
   $('axisSurface').checked=S.axis===0;$('axisWorld').checked=S.axis===1;
-  $('tabGrove').checked=name==='grove';$('tabGabor').checked=name==='gabor';
-  document.body.classList.toggle('gabor',name==='gabor');
+  $('tabGrove').checked=name==='grove';$('tabGabor').checked=name==='gabor';$('tabPortrait').checked=name==='portrait';
+  document.body.classList.toggle('gabor',name==='gabor');document.body.classList.toggle('portrait',name==='portrait');
   $('pullRow').hidden=$('psRow').hidden=$('nestRow').hidden=name!=='gabor';
   caption();
   if(presetsReady){renderPresets();applyPreset(presetBy[name]);}
@@ -933,8 +968,8 @@ function setScene(name,quiet){
   if(!quiet){try{location.hash=name;}catch(err){}}
 }
 for(const el of document.querySelectorAll('input[name=scene]'))el.addEventListener('change',e=>{setScene(e.target.value);});
-window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if(SC[h]&&h!==S.scene)setScene(h,true);});
-setScene(location.hash==='#gabor'?'gabor':'grove',true);
+window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if((SC[h]||h==='portrait')&&h!==S.scene)setScene(h,true);});
+setScene(location.hash==='#gabor'?'gabor':location.hash==='#portrait'?'portrait':'grove',true);
 // anaglyph: each eye's view is reduced to luminance and written to that eye's colour channels
 const EYES={1:['blue','green'],2:['red','cyan']};
 function stereoUI(){
@@ -975,7 +1010,7 @@ function frame(now){
   $('pullOut').textContent=Math.round(S.spreadEff*100)+'%';
   S.wave+=(S.waveT-S.wave)*Math.min(1,dt*3);S.carrier+=(S.carrierT-S.carrier)*Math.min(1,dt*4);
   dockSm+=(dockShift-dockSm)*Math.min(1,dt*9);
-  S.idle+=dt;if(S.auto&&S.idle>2.5&&ptrs.size===0)cam.yaw+=S.scene==='gabor'?0.07*Math.sin((S.idle-2.5)*0.3)*dt:0.045*dt;
+  S.idle+=dt;if(S.auto&&S.idle>2.5&&ptrs.size===0)cam.yaw+=S.scene==='gabor'?0.07*Math.sin((S.idle-2.5)*0.3)*dt:S.scene==='portrait'?0.13*Math.sin((S.idle-2.5)*0.3)*dt:0.045*dt;
   cvTick(now);
   if(VR.on)drawVR(now/1000,dt);else draw(now/1000);
   const deg=((S.theta*180/Math.PI)%360+360)%360;
@@ -986,7 +1021,7 @@ function draw(t){
   const cp=Math.cos(cam.pitch),sp=Math.sin(cam.pitch);
   const isG=S.scene==='gabor',fr=isG&&S.nest>1,sc=fr?SC.fract:SC[S.scene],spread=isG?S.spreadEff:0,dist=cam.dist*(fr?nestZoom():1+spread*2.4),tgt=fr?nestTarget():cam.target;
   const pos=[tgt[0]+dist*cp*Math.sin(cam.yaw),tgt[1]+dist*sp,tgt[2]+dist*cp*Math.cos(cam.yaw)];
-  if(!isG){const gmin=ground(pos[0],pos[2])+0.22;if(pos[1]<gmin)pos[1]=gmin;}
+  if(S.scene==='grove'){const gmin=ground(pos[0],pos[2])+0.22;if(pos[1]<gmin)pos[1]=gmin;}
   const fw=norm(sub3(tgt,pos)),rt=norm(cross(fw,[0,1,0])),upv=cross(rt,fw);
   if(fr)fractalBuild(tgt,dist*0.85);
   const vis=sortSplats(sc,pos,fw,fr?1:1+spread*5);
@@ -1005,7 +1040,7 @@ function draw(t){
   gl.uniform3f(U.uCamPos,pos[0],pos[1],pos[2]);gl.uniform3f(U.uR,rt[0],rt[1],rt[2]);gl.uniform3f(U.uU,upv[0],upv[1],upv[2]);gl.uniform3f(U.uF,fw[0],fw[1],fw[2]);
   gl.uniform2f(U.uViewport,W,Hh);const yoff=portrait?dockSm*0.9:dockSm*0.45;
   const focal=0.5*Math.min(Hh,W*1.45)/Math.tan(24*Math.PI/180);gl.uniform1f(U.uFocal,focal);gl.uniform1f(U.uGray,st?1:0);
-  gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,fr?0:spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff*(fr?nestSF():1));gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,isG?0:0.10);
+  gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,fr?0:spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff*(fr?nestSF():1));gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,S.scene==='grove'?0.10:0);
   if(!st){gl.uniform2f(U.uOffset,0,yoff);gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,vis);}
   else{
     // off-axis stereo pair: eyes sit either side of the camera, frusta sheared so the orbit target has zero disparity
@@ -1034,7 +1069,7 @@ function drawVR(t,dt){
   else{const y=VR.yawOff,pc=Math.cos(VR.pitch);fw=[-Math.sin(y)*pc,Math.sin(VR.pitch),-Math.cos(y)*pc];rt=norm(cross(fw,[0,1,0]));upv=cross(rt,fw);}
   if(!VR.got&&!VR.warned&&performance.now()-VR.t0>1800){VR.warned=true;vrHint('No motion sensor data here. Drag to look, tap to move.');}
   if(VR.moving){
-    if(isG){
+    if(S.scene!=='grove'){
       for(let i=0;i<3;i++)P[i]+=fw[i]*0.9*dt;
       const r=len(P);if(r>14)for(let i=0;i<3;i++)P[i]*=14/r;
     }else{
@@ -1043,7 +1078,7 @@ function drawVR(t,dt){
       const r=Math.hypot(P[0],P[2]);if(r>6.3){P[0]*=6.3/r;P[2]*=6.3/r;}
     }
   }
-  if(!isG)P[1]+=(ground(P[0],P[2])+VR.eye-P[1])*Math.min(1,dt*6);
+  if(S.scene==='grove')P[1]+=(ground(P[0],P[2])+VR.eye-P[1])*Math.min(1,dt*6);
   if(fr)fractalBuild(nestTarget(),1e9);
   const vis=sortSplats(sc,P,fw,fr?1:1+spread*5);
   gl.bindTexture(gl.TEXTURE_2D,sc.tex);
@@ -1062,7 +1097,7 @@ function drawVR(t,dt){
   gl.uniform2f(U.uViewport,hw,Hh);gl.uniform2f(U.uOffset,0,0);gl.uniform1f(U.uFocal,focal);gl.uniform1f(U.uGray,0);
   
   gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);
-  gl.uniform1f(U.uSpread,fr?0:spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff*(fr?nestSF():1));gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform1f(U.uFogK,isG?0:0.10);
+  gl.uniform1f(U.uSpread,fr?0:spread);gl.uniform1f(U.uSigma,S.sigma);gl.uniform1f(U.uSF,S.sfEff*(fr?nestSF():1));gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform1f(U.uFogK,S.scene==='grove'?0.10:0);
   gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);
   for(let e=0;e<2;e++){
     const sg=e===0?-1:1,h=sg*VR.ipd/2;
@@ -1094,7 +1129,14 @@ const PRESETS={
     {name:'Shatter',speed:16,col:60},
     {name:'Zoom',speed:8,world:1,sweep:77},
     {name:'Swarm',speed:20,pull:70,psf:-25,sf:40},
-    {name:'Classic',speed:6,world:1}]
+    {name:'Classic',speed:6,world:1}],
+  portrait:[
+    {name:'Engraved',speed:2,world:1,con:85},
+    {name:'Faithful',speed:0,world:1,con:0},
+    {name:'Kaleidoscope',speed:12,world:1,wave:1,sf:-10,sweep:55,col:80},
+    {name:'Pointillist',speed:6,world:1,psf:-55,sf:20,col:40},
+    {name:'Shatter',speed:14},
+    {name:'Melt',speed:9,wave:1,world:1,env:1}]
 };
 function markPreset(i){const b=$('presets').children;for(let k=0;k<b.length;k++)b[k].setAttribute('aria-pressed',String(k===i));}
 function renderPresets(){
