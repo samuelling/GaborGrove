@@ -10,7 +10,7 @@ VR head tracking needs the page served over HTTPS as a top-level page (for examp
 
 - **Mushroom grove** — a procedural twilight grove of about 35,000 Gabor splats. Gills, cap striations, stem fibres, bark, growth rings and fern leaflets all come from carriers, not from extra splats.
 - **Gabor of Gabors** — one large 3D Gabor on a mean-gray field, built from 1,290 small phase-locked Gabor splats on a jittered lattice.
-- **Portrait** — a head-and-shoulders Gaussian-splat scan from a phone (Scaniverse), loaded on demand from `portrait.bin` and rendered as Gabor splats. Each Gaussian keeps its position, shape, colour and opacity, and all of them share one phase-locked carrier, so the stripes cut through the head as parallel sheets and show on the surface like engraving lines.
+- **Portrait** — a head-and-shoulders Gaussian-splat scan from a phone (Scaniverse), loaded on demand from `portrait.json` and rendered as Gabor splats. Each Gaussian keeps its position, shape, colour and opacity, and all of them share one phase-locked carrier, so the stripes cut through the head as parallel sheets and show on the surface like engraving lines.
 
 ## Presets
 

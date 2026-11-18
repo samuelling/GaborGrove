@@ -922,7 +922,10 @@ $('col').addEventListener('input',e=>{S.col=+e.target.value/100;$('colOut').text
 let portraitLoad=null;
 function loadPortrait(){
   if(portraitLoad)return portraitLoad;
-  portraitLoad=fetch('portrait.bin').then(r=>{if(!r.ok)throw new Error('scan missing');return r.arrayBuffer();}).then(buf=>{
+  // the scan ships as base64 inside a JSON file, because some hosts will not serve raw binary
+  portraitLoad=fetch('portrait.json').then(r=>{if(!r.ok)throw new Error('scan missing');return r.json();}).then(j=>{
+    const bin=atob(j.data),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+    const buf=u8.buffer;
     const dv=new DataView(buf),n=dv.getUint32(0,true),rng=dv.getFloat32(4,true);
     let o=8;
     const P=new Int16Array(buf,o,n*3);o+=n*6;
