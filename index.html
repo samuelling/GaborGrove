@@ -75,29 +75,32 @@ legend{float:left;padding:0;margin-right:8px;font-size:11px;color:var(--dim)}
 #hide{margin-left:auto;padding:5px 12px;min-height:30px;font-size:12px;color:var(--dim)}
 :focus-visible{outline:2px solid var(--glow);outline-offset:2px}
 .seg input:focus-visible + span{outline:2px solid var(--glow);outline-offset:2px}
-/* the controls live in a shelf that slides up from the bottom edge and stops below the header. Closed, it is fully off
-   screen and only its grab tab shows. The tab floats clear of the bottom edge, so reaching for it does not start the phone's
-   own bottom-edge swipe: tap it, or drag it, to pull the shelf up and push it back down. */
-#dock{bottom:0;width:min(720px,100%);border-radius:16px 16px 0 0;border-bottom:0;padding:12px 14px 12px;gap:10px;max-height:calc(100% - var(--hdr,150px) - 56px);overflow:visible;
-  box-shadow:0 -8px 30px rgba(0,0,0,.45);transform:translate(-50%,var(--ty,120%));transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+/* the controls live in a shelf that slides in from the right edge and hangs below the header. Closed, it is fully off
+   screen and only its grab tab shows. The tab floats clear of the screen edge, so reaching for it does not start the phone's
+   own edge swipe: tap it, or drag it, to pull the shelf out and push it back. On a phone the open shelf also stops short of
+   the left edge, for the same reason. Wide screens: a side panel, and the scene moves over to make way. */
+#dock{left:auto;right:0;top:var(--hdr,150px);bottom:0;width:min(420px,calc(100% - 84px));border-radius:16px 0 0 0;border-right:0;border-bottom:0;padding:10px 14px 12px;gap:10px;overflow:visible;
+  box-shadow:-8px 0 30px rgba(0,0,0,.45);transform:translateX(var(--tx,130%));transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+@media (min-width:640px) and (min-aspect-ratio:5/4){#dock{width:clamp(340px,34vw,480px)}}
 #dock.drag{transition:none}
-#grip{position:absolute;left:50%;top:calc(-46px - var(--lift,0px));transform:translateX(-50%);width:180px;height:46px;min-height:46px;padding:0 18px;border:1px solid var(--line);border-bottom:0;border-radius:16px 16px 0 0;
-  background:var(--panel);color:var(--glow);display:flex;align-items:center;justify-content:space-between;cursor:grab;touch-action:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  box-shadow:0 -6px 16px rgba(0,0,0,.3);transition:top .3s cubic-bezier(.2,.8,.2,1),border-radius .3s}
-#grip::before{content:"";position:absolute;inset:-14px -24px -10px}   /* a wider target than the tab itself */
-#dock:not(.open) #grip{--lift:calc(env(safe-area-inset-bottom,0px) + 26px);border-radius:999px;border-bottom:1px solid var(--line);box-shadow:0 4px 18px rgba(0,0,0,.45)}
-#grip i{width:18px;height:8px;border-top:2px solid var(--dim);border-bottom:2px solid var(--dim);opacity:.85}
-#grip b{font-size:12px;font-weight:500;letter-spacing:.14em;text-transform:uppercase}
+#dock fieldset{flex-wrap:wrap}   /* in a narrow shelf a wide choice drops under its label */
+#grip{position:absolute;top:calc(50% - 90px);left:calc(-46px - var(--lift,0px));width:46px;height:180px;min-height:0;padding:18px 0;border:1px solid var(--line);border-right:0;border-radius:16px 0 0 16px;
+  background:var(--panel);color:var(--glow);display:flex;flex-direction:column;align-items:center;justify-content:space-between;cursor:grab;touch-action:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  box-shadow:-6px 0 16px rgba(0,0,0,.3);transition:left .3s cubic-bezier(.2,.8,.2,1),border-radius .3s}
+#grip::before{content:"";position:absolute;inset:-24px -10px -24px -16px}   /* a wider target than the tab itself */
+#dock:not(.open) #grip{--lift:calc(env(safe-area-inset-right,0px) + 26px);border-radius:999px;border-right:1px solid var(--line);box-shadow:0 4px 18px rgba(0,0,0,.45)}
+#grip i{width:8px;height:18px;border-left:2px solid var(--dim);border-right:2px solid var(--dim);opacity:.85}
+#grip b{writing-mode:vertical-rl;transform:rotate(180deg);font-size:12px;font-weight:500;letter-spacing:.14em;text-transform:uppercase}
 #grip:active{cursor:grabbing}
 #dock.open #grip{color:var(--cream)}
 body.gabor #grip{background:rgba(9,18,27,.9)}
-/* a tall open shelf hides the scene, so while a slider is held everything but that slider steps aside */
+/* on a phone the open shelf hides most of the scene, so while a slider is held everything but that slider steps aside */
 #dock.peek{background:transparent!important;border-color:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
 #dock.peek #grip,#dock.peek #dockClose,#dock.peek .row>*{opacity:0;transition:opacity .15s}
 #dock.peek .row>.hold{opacity:1;background:var(--panel);border-radius:999px;box-shadow:0 0 0 8px var(--panel)}
 #dockClose{position:absolute;top:9px;right:10px;width:30px;height:30px;min-height:30px;padding:0;border:0;border-radius:50%;background:rgba(241,227,196,.12);font-size:13px;line-height:1}
 #dock>.row{padding-right:36px}
-#dockBody{display:flex;flex-direction:column;gap:10px;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:env(safe-area-inset-bottom,0px)}
+#dockBody{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (max-width:520px){#dock{padding:10px 12px 10px;gap:6px}#dockBody{gap:6px}}
 @media (prefers-reduced-motion:reduce){#dock{transition:none}}
 .led{width:9px;height:9px;border-radius:50%;background:var(--line);flex:none}
@@ -1030,35 +1033,35 @@ document.addEventListener('fullscreenchange',()=>{if(VR.on&&VR.fs&&!document.ful
 window.addEventListener('keydown',e=>{if(!VR.on)return;if(e.key===' '||e.key==='Enter'){VR.moving=!VR.moving;e.preventDefault();}else if(e.key==='Escape')exitVR();});
 let presetsReady=false;const presetBy={grove:0,gabor:0,portrait:0};
 const S={nest:1,col:0,stereo:0,depth:0.4,swap:false,scene:'grove',spread:0,spreadEff:0,bsweep:0,bsAmp:0,bsPhase:0,sigEff:1,sat:0,svar:0,fvar:0,svarEff:0,fvarEff:0,vsweep:0,vsAmp:0,vsPhase:0,redraw:0,rdPhase:0,psweep:0,psAmp:0,psPhase:0,sigma:1,sf:1,sfEff:1,sweep:0,sweepAmp:0,sweepPhase:0,con:1,conEff:1,csweep:0,csAmp:0,csPhase:0,theta:0,speed:6,playing:!reduce,wave:0,waveT:0,axis:0,carrier:1,carrierT:1,env:0,auto:!reduce,idle:99};
-let W=1,Hh=1,scale=Math.min(window.devicePixelRatio||1,2),dockShift=0,dockSm=0,drawerTy=0;
+let W=1,Hh=1,scale=Math.min(window.devicePixelRatio||1,2),dockShift=0,dockSm=0,drawerTx=0;
 const dock=document.getElementById('dock');
 function resize(){
   const w=canvas.clientWidth,h=canvas.clientHeight;
   W=Math.max(2,Math.round(w*scale));Hh=Math.max(2,Math.round(h*scale));
   if(canvas.width!==W||canvas.height!==Hh){canvas.width=W;canvas.height=Hh;}
-  const dh=dock.offsetHeight-drawerTy;   // the part of the shelf that is on screen
-  dockShift=h>0?clamp(dh/h,0,0.45):0;
+  const f=w>0?(dock.offsetWidth-drawerTx)/w:0;   // the share of the width the shelf covers
+  dockShift=f<=0.5?clamp(f,0,0.5):0;              // a side panel moves the scene over; a phone-width shelf just covers it
 }
 new ResizeObserver(resize).observe(canvas);resize();
 const drawer=(function(){
   const grip=document.getElementById('grip'),body=document.getElementById('dockBody'),first=dock.querySelector('.row'),shut=document.getElementById('dockClose');
-  let open=false,maxTy=0,drag=null;
-  // the open shelf stops short of the header, however tall the header is
+  let open=false,maxTx=0,drag=null;
+  // the shelf hangs from just under the header, however tall the header is
   const hang=()=>{const b=document.querySelector('header').getBoundingClientRect().bottom;if(b>0)document.documentElement.style.setProperty('--hdr',Math.round(b)+'px');};
-  function place(v){drawerTy=clamp(v,0,maxTy);dock.style.setProperty('--ty',drawerTy+'px');resize();}
-  function set(o){open=o;hang();maxTy=dock.offsetHeight;dock.classList.remove('drag');place(o?0:maxTy);grip.setAttribute('aria-expanded',String(o));dock.classList.toggle('open',o);body.inert=first.inert=shut.inert=!o;}
-  grip.addEventListener('pointerdown',e=>{e.preventDefault();try{grip.setPointerCapture(e.pointerId);}catch(err){}maxTy=dock.offsetHeight;drag={y:e.clientY,t0:drawerTy,moved:0,last:e.clientY,v:0};dock.classList.add('drag');});
-  grip.addEventListener('pointermove',e=>{if(!drag)return;drag.v=e.clientY-drag.last;drag.last=e.clientY;drag.moved=Math.max(drag.moved,Math.abs(e.clientY-drag.y));if(drag.moved>=6)place(drag.t0+e.clientY-drag.y);});
+  function place(v){drawerTx=clamp(v,0,maxTx);dock.style.setProperty('--tx',drawerTx+'px');resize();}
+  function set(o){open=o;hang();maxTx=dock.offsetWidth;dock.classList.remove('drag');place(o?0:maxTx);grip.setAttribute('aria-expanded',String(o));dock.classList.toggle('open',o);body.inert=first.inert=shut.inert=!o;}
+  grip.addEventListener('pointerdown',e=>{e.preventDefault();try{grip.setPointerCapture(e.pointerId);}catch(err){}maxTx=dock.offsetWidth;drag={x:e.clientX,t0:drawerTx,moved:0,last:e.clientX,v:0};dock.classList.add('drag');});
+  grip.addEventListener('pointermove',e=>{if(!drag)return;drag.v=e.clientX-drag.last;drag.last=e.clientX;drag.moved=Math.max(drag.moved,Math.abs(e.clientX-drag.x));if(drag.moved>=6)place(drag.t0+e.clientX-drag.x);});
   const end=e=>{if(!drag)return;const d=drag;drag=null;
     if(e.type==='pointerup'&&d.moved<6)set(!open);                       // a tap toggles
-    else set(Math.abs(d.v)>4?d.v<0:drawerTy<maxTy*0.5);};                 // a flick decides, otherwise the nearer stop
+    else set(Math.abs(d.v)>4?d.v<0:drawerTx<maxTx*0.5);};                 // a flick decides, otherwise the nearer stop
   grip.addEventListener('pointerup',end);grip.addEventListener('pointercancel',end);
   grip.addEventListener('click',e=>{if(e.detail===0)set(!open);});        // keyboard
   shut.addEventListener('click',()=>set(false));
-  // a tall open shelf hides the scene, so holding a slider clears everything else out of the way to show it
+  // a phone-width shelf hides the scene, so holding a slider clears everything else out of the way to show it
   dock.addEventListener('pointerdown',e=>{
     const r=e.target.closest?e.target.closest('input[type=range]'):null,row=r&&r.closest('.speed');
-    if(!row||dock.offsetHeight<=canvas.clientHeight*0.5)return;
+    if(!row||dock.offsetWidth<=canvas.clientWidth*0.5)return;
     dock.classList.add('peek');row.classList.add('hold');
     const done=()=>{dock.classList.remove('peek');row.classList.remove('hold');for(const t of['pointerup','pointercancel'])window.removeEventListener(t,done,true);};
     for(const t of['pointerup','pointercancel'])window.addEventListener(t,done,true);
@@ -1452,12 +1455,11 @@ function draw(t){
   const bg=hdr?0.5:(st?(isG?0.5:0.13):0),used=st?[MASK[0][0]|MASK[1][0],MASK[0][1]|MASK[1][1],MASK[0][2]|MASK[1][2]]:[1,1,1];
   gl.viewport(0,0,W,Hh);gl.colorMask(true,true,true,true);
   gl.clearColor(bg*used[0],bg*used[1],bg*used[2],(hdr||st)?1:0);gl.clear(gl.COLOR_BUFFER_BIT);
-  const portrait=Hh>W;
   gl.uniform3f(U.uCamPos,pos[0],pos[1],pos[2]);gl.uniform3f(U.uR,rt[0],rt[1],rt[2]);gl.uniform3f(U.uU,upv[0],upv[1],upv[2]);gl.uniform3f(U.uF,fw[0],fw[1],fw[2]);
-  gl.uniform2f(U.uViewport,W,Hh);const yoff=portrait?dockSm*0.9:dockSm*0.45;
+  gl.uniform2f(U.uViewport,W,Hh);const xoff=-dockSm;
   const focal=0.5*Math.min(Hh,W*1.45)/Math.tan(24*Math.PI/180);gl.uniform1f(U.uFocal,focal);gl.uniform1f(U.uGray,st?1:0);
   gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,fr?0:spread);gl.uniform1f(U.uSigma,S.sigEff);gl.uniform1f(U.uPort,S.scene==='portrait'?1:0);gl.uniform1f(U.uSat,S.scene==='portrait'?S.sat:1);gl.uniform1f(U.uSizeVar,S.svarEff*Math.LN2);gl.uniform1f(U.uSFVar,S.fvarEff*Math.LN2);gl.uniform1f(U.uRedraw,S.rdPhase);gl.uniform1f(U.uSF,S.sfEff*(fr?nestSF():1));gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,S.scene==='grove'?0.10:0);
-  if(!st){gl.uniform2f(U.uOffset,0,yoff);gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,vis);}
+  if(!st){gl.uniform2f(U.uOffset,xoff,0);gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,vis);}
   else{
     // off-axis stereo pair: eyes sit either side of the camera, frusta sheared so the orbit target has zero disparity
     const dcam=len(sub3(tgt,pos)),sep=dcam*S.depth/12,shift=focal*sep/(dcam*W);
@@ -1465,7 +1467,7 @@ function draw(t){
       const sg=e===0?-1:1,m=MASK[e];
       gl.colorMask(!!m[0],!!m[1],!!m[2],false);
       gl.uniform3f(U.uCamPos,pos[0]+rt[0]*sg*sep/2,pos[1]+rt[1]*sg*sep/2,pos[2]+rt[2]*sg*sep/2);
-      gl.uniform2f(U.uOffset,sg*shift,yoff);
+      gl.uniform2f(U.uOffset,sg*shift+xoff,0);
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,vis);
     }
     gl.colorMask(true,true,true,true);
