@@ -59,8 +59,8 @@ The controls sit in a shelf that slides in from the right edge and hangs below t
 - **Contrast** — carrier contrast, 1% to 100% on a log axis. In the grove this is texture contrast; object colour and shading stay.
 - **Contrast sweep** — log-sinusoid between the slider value and a 1% floor.
 - **Color by angle** — tints the two carrier phases with opponent colours whose hue follows the carrier angle (180° of orientation spans the hue circle).
-- **Nesting** (Gabor of Gabors) — how many scales deep the recursion goes, from classic (one big Gabor made of 1,290 small ones) up to 6 scales. At 2 or more, the big Gabor divides into eight half-size Gabors, each of those into eight more, and so on (8, 64, 512, 4,096, 32,768 at the bottom). Pull apart opens one scale at a time, and the camera follows one branch down so the pieces stay about the same size on screen. The pieces share one phase-locked carrier whose frequency rises as each scale opens, they are thin along the view axis (a fat many-cycle Gabor vanishes a few degrees off axis), and pieces behind the focused one fade toward gray.
-- **Pull apart** (Gabor of Gabors, Portrait) — spreads the pieces out. In Gabor of Gabors, only one small Gabor in eight stays visible once apart, so each reads as a separate patch. In Portrait, one scan splat in 48 stays and grows into a patch wide enough to carry a few stripes of its own, with a longer wavelength so the stripes survive the camera backing off. The rest fade back in as it closes up.
+- **Nesting** (Gabor of Gabors) — how many scales deep the recursion goes, from classic (one big Gabor made of 1,290 small ones) up to 6 scales. At 2 or more, the big Gabor divides into eight half-size Gabors, each of those into eight more, and so on (8, 64, 512, 4,096, 32,768 at the bottom). Pull apart opens one scale at a time, and the camera follows one branch down so the pieces stay about the same size on screen. The pieces share one phase-locked carrier whose frequency rises as each scale opens, they are balls like every other splat, so the stripes of pieces off to the side of the view are fainter, and pieces behind the focused one fade toward gray.
+- **Pull apart** (Gabor of Gabors, Portrait) — spreads the pieces out. In Gabor of Gabors, only one small Gabor in eight stays visible once apart, so each reads as a separate patch. In Portrait, one scan splat in 48 stays and grows into a ball wide enough to carry a few stripes of its own, with a longer wavelength so the stripes survive the camera backing off. The rest fade back in as it closes up.
 - **Pull sweep** (Gabor of Gabors, Portrait) — cycles between pulled apart and assembled.
 - **Scan color** (Portrait) — how much of the scan's own colour is kept. Portrait presets open in grayscale; Color by angle still tints on top.
 - **3D** — anaglyph stereo for blue/green or red/cyan glasses, with a depth slider and an eye swap. Each eye's view is reduced to luminance and written to that eye's colour channels; the two views use off-axis frusta with zero disparity at the orbit target.
@@ -97,6 +97,18 @@ addEventListener('message', e => {
 - Pages on the same origin can use `new BroadcastChannel('gabor-grove')` with the same messages.
 
 **MIDI.** "Connect MIDI" in the drawer listens on every MIDI input for CC 20 upward (one per input, in the order above) and sends the outputs as CC 40 upward. This needs a browser with Web MIDI.
+
+## Every splat is a ball
+
+Every Gabor splat is a true 3D Gabor: an isotropic Gaussian volume times a plane wave. Nothing is flattened into a disc or a slab.
+
+- **Mushroom grove.** The shapes were laid out as patches of surface (two widths and a thickness). Each patch becomes a ball of the same face-on area, sunk 1.3 radii behind the surface it stood on, so the ball's soft edge lands where the surface was.
+- **Portrait.** A scan's splats arrive as ellipsoids. Each becomes a ball whose radius is the geometric mean of its two longer axes.
+- **Gabor of Gabors.** The small Gabors were always balls; the nested pieces now are too.
+
+Two consequences follow from the projection below. A ball's stripes fade as its wave turns toward the viewer, by `exp(-½ (k_z σ)²)`, so orbiting a scene makes stripes come and go. And a fine wave in a fat ball would show from almost nowhere, so in the grove a wave is lengthened where needed to keep `k σ` at 3 or less: at 30° off the best view such a ball still shows about a third of its contrast.
+
+A ball also fades out as the camera comes within about three radii of its centre, so that standing close to a surface does not fog the view.
 
 ## How the projection works
 

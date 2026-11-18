@@ -190,7 +190,7 @@ body.vr #gl{cursor:default}
     </div>
     <p>Vision scientists use Gabors constantly, because cells early in the brain's visual system respond to little striped patches like this one.</p>
     <h3>4 · A 3D Gabor splat</h3>
-    <p>Everything here is made of these. The stripes are not painted on the blob's surface. They are a wave running through its whole volume, like grain through a block of wood. Orbit the scene and the stripes shift the way grain does when you cut the block at a new angle. Look straight down the wave and they vanish.</p>
+    <p>Everything here is made of these, and every one is a round ball, the same in all directions. The stripes are not painted on the blob's surface. They are a wave running through its whole volume, like grain through a block of wood. Orbit the scene and the stripes shift the way grain does when you cut the block at a new angle. Look straight down the wave and they vanish.</p>
     <h3>5 · What is turning</h3>
     <p>The dial is the direction of the wave. It turns inside every splat at once, so the stripes rotate while the shapes stay put.</p>
     <h3>The tabs</h3>
@@ -430,8 +430,23 @@ const TAU=Math.PI*2;
 /* ---------- splat store: 7 RGBA32F texels per Gabor ---------- */
 const PER_ROW=256,TEXELS=7,STRIDE=TEXELS*4;
 let cap=48000,data=new Float32Array(cap*STRIDE),N=0;
+/* Every Gabor splat is a true 3D Gabor: an isotropic Gaussian volume times a plane wave. The scene builders still
+   describe each splat as a patch of surface (two widths and a thickness), because that is how the shapes were laid out;
+   here the patch becomes a ball of the same face-on area. Nothing is a slab.
+   A ball's stripes fade as the wave turns toward the viewer, by exp(-(k_z sigma)^2 / 2), so a fine wave in a fat ball
+   shows from almost nowhere. ISO_KSIG caps k*sigma, lengthening a wave that could not otherwise be seen. */
+const ISO_KSIG=3,ISO_SINK=1.3;
 function splat(p,t,n,sx,sy,sz,c1,c2,op,k,ph,w,wa,flag,coh){
   if(N>=cap){cap*=2;const d=new Float32Array(cap*STRIDE);d.set(data);data=d;}
+  if(!flag){
+    const r=Math.sqrt(sx*sy);
+    // a surface patch becomes a ball sunk a little over one radius behind the surface it stood on, so the ball's soft edge lands
+    // where the surface was and shapes keep their outlines (patches that were already volumes stay where they are)
+    if(!coh&&sz<r*0.5){const nn=norm(n);p=[p[0]-nn[0]*r*ISO_SINK,p[1]-nn[1]*r*ISO_SINK,p[2]-nn[2]*r*ISO_SINK];}
+    sx=sy=sz=r;
+    const km=Math.hypot(k[0],k[1],k[2]);
+    if(!coh&&ISO_KSIG>0&&km*r>ISO_KSIG){const f=ISO_KSIG/(km*r);k=[k[0]*f,k[1]*f,k[2]*f];ph=(ph||0)*f;}
+  }
   n=norm(n);t=norm(sub3(t,mul(n,dot(t,n))));
   const o=N*STRIDE;
   data[o]=p[0];data[o+1]=p[1];data[o+2]=p[2];data[o+3]=op;
@@ -554,7 +569,7 @@ function mushroom(o){
       const c=sh([0.98,0.94,0.82],p,n);
       splat(p,tt,n,rs*0.36,TAU*r/nt*0.62,thin,c,mul(c,0.7),0.95,mul(d.t,22/r),22*th,0.5,0,0);}
   }
-  if(em){splat(add3(C,mul(A,capH*0.3)),U,A,R*2.4,R*2.4,R*2.0,[0.10,0.34,0.28],[0.10,0.34,0.28],0.22,[0,0,0],0,0,0,2);}
+  if(em){splat(add3(C,mul(A,capH*0.3)),U,A,R*2.3,R*2.3,R*2.3,[0.10,0.34,0.28],[0.10,0.34,0.28],0.22,[0,0,0],0,0,0,2);}
 }
 
 /* ---------- scene plan ---------- */
@@ -766,7 +781,7 @@ void main(){
     ph=dot(k,pos);
     op=mix(op,0.92*step(sd,0.021),ap);
     if(op<0.004){gl_Position=vec4(2.0,2.0,2.0,1.0);return;}
-    sc=mix(sc,clamp(sc*11.0/vz,vec3(0.06),vec3(0.3))*vec3(1.0,1.0,0.45)*uSigma*vz,ap);
+    sc=mix(sc,clamp(sc*11.0/vz,vec3(0.06),vec3(0.3))*uSigma*vz,ap);
     vec3 md=0.5*(c1+c2),dl=0.5*(c1-c2)*mix(1.0,2.4,ap);c1=md+dl;c2=md-dl;
     pos*=1.0+uSpread*5.0;
   }else if(coh>0.5){
@@ -780,6 +795,9 @@ void main(){
   k*=fz;   // applied after the phase is set, so each splat keeps its phase at its own centre and only its stripe width changes
   vec3 pc=toCam(pos-uCamPos);
   if(pc.z<0.25){gl_Position=vec4(2.0,2.0,2.0,1.0);return;}
+  // a ball fades out as the camera comes within a few radii of its centre, so that being close to a surface,
+  // or inside a ball, does not fog or black out the view
+  if(flag<0.5){op*=smoothstep(1.2,3.2,pc.z/max(sc.x,max(sc.y,sc.z)));if(op<0.004){gl_Position=vec4(2.0,2.0,2.0,1.0);return;}}
   // covariance in a frame whose third axis is the viewing ray
   vec3 m0=toCam(tA)*sc.x,m1=toCam(bt)*sc.y,m2=toCam(n)*sc.z;
   vec3 r=normalize(pc),e1=normalize(cross(vec3(0.0,1.0,0.0),r)),e2=cross(r,e1);
@@ -957,7 +975,7 @@ function fractalBuild(tg,viewR){
     data[o]=cx;data[o+1]=cy;data[o+2]=cz;data[o+3]=0.9*al;
     data[o+4]=0;data[o+5]=1;data[o+6]=0;data[o+7]=sig;
     data[o+8]=0;data[o+9]=0;data[o+10]=1;data[o+11]=sig;
-    data[o+12]=data[o+13]=data[o+14]=1;data[o+15]=sig*0.1;   // thin along the view axis: a fat many-cycle Gabor vanishes a few degrees off axis
+    data[o+12]=data[o+13]=data[o+14]=1;data[o+15]=sig;        // a ball, like every other splat
     data[o+16]=data[o+17]=data[o+18]=0;data[o+19]=1;
     data[o+20]=k0;data[o+21]=0;data[o+22]=0;data[o+23]=0;
     data[o+24]=0;data[o+25]=0;data[o+26]=(id*0.6180339887)%1;data[o+27]=1;
