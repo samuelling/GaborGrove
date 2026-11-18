@@ -192,6 +192,7 @@ body.vr #gl{cursor:default}
       <dt>Point spread</dt><dd>How big each blob is.</dd>
       <dt>Spatial freq</dt><dd>How fine the stripes are.</dd>
       <dt>Contrast</dt><dd>How strong the stripes are.</dd>
+      <dt>Variance</dt><dd>Lets every blob pick its own size or stripe width at random, around the value you set. Redraw rate makes them keep picking.</dd>
       <dt>Pull apart</dt><dd>Separates the pieces so you can see what the whole is made of.</dd>
       <dt>Sweeps</dt><dd>Move a control back and forth for you.</dd>
       <dt>3D and VR</dt><dd>Colored glasses or a phone headset, to stand inside it.</dd>
@@ -280,6 +281,26 @@ body.vr #gl{cursor:default}
       <label for="sweep">SF sweep</label>
       <input id="sweep" type="range" min="0" max="100" step="1" value="0">
       <output id="sweepOut" for="sweep">off</output>
+    </div>
+    <div class="speed">
+      <label for="svar">Size variance</label>
+      <input id="svar" type="range" min="0" max="100" step="1" value="0">
+      <output id="svarOut" for="svar">0</output>
+    </div>
+    <div class="speed">
+      <label for="fvar">SF variance</label>
+      <input id="fvar" type="range" min="0" max="100" step="1" value="0">
+      <output id="fvarOut" for="fvar">0</output>
+    </div>
+    <div class="speed">
+      <label for="vsweep">Variance sweep</label>
+      <input id="vsweep" type="range" min="0" max="100" step="1" value="0">
+      <output id="vsweepOut" for="vsweep">off</output>
+    </div>
+    <div class="speed">
+      <label for="redraw">Redraw rate</label>
+      <input id="redraw" type="range" min="0" max="100" step="1" value="0">
+      <output id="redrawOut" for="redraw">frozen</output>
     </div>
     <div class="speed">
       <label for="col">Color by angle</label>
@@ -660,12 +681,16 @@ precision highp float;precision highp int;
 uniform highp sampler2D uData;
 uniform vec3 uCamPos,uR,uU,uF,uAxis,uFog;
 uniform vec2 uViewport,uOffset;
-uniform float uFocal,uTime,uTheta,uWave,uCarrier,uEnv,uAxisMode,uSpread,uFogK,uSigma,uSF,uContrast,uCol,uPort,uSat;
+uniform float uFocal,uTime,uTheta,uWave,uCarrier,uEnv,uAxisMode,uSpread,uFogK,uSigma,uSF,uContrast,uCol,uPort,uSat,uSizeVar,uSFVar,uRedraw;
 const float PORT_K=3.4;
 in float aIndex;
 out vec2 vUV;out vec2 vKq;out float vPhase;out float vAmp;out vec3 vC1;out vec3 vC2;out vec4 vPar;out float vR2;
 vec3 rot(vec3 v,vec3 a,float c,float s){return v*c+cross(a,v)*s+a*dot(a,v)*(1.0-c);}
 vec3 toCam(vec3 v){return vec3(dot(uR,v),dot(uU,v),dot(uF,v));}
+// per-splat random draws: an integer hash of the splat's seed gives two independent standard normals
+uint pcg(uint v){uint s=v*747796405u+2891336453u;uint w=((s>>((s>>28u)+4u))^s)*277803737u;return (w>>22u)^w;}
+float u01(uint v){return (float(pcg(v)>>8u)+0.5)/16777216.0;}
+vec2 gauss2(uint v){float r=sqrt(-2.0*log(u01(v))),a=6.2831853*u01(v^0x9e3779b9u);return r*vec2(cos(a),sin(a));}
 void main(){
   int i=int(aIndex+0.5);
   ivec2 b=ivec2((i&255)*7,i>>8);
@@ -677,6 +702,15 @@ void main(){
   if(uSat<1.0){c1=mix(vec3(dot(c1,vec3(0.299,0.587,0.114))),c1,uSat);c2=mix(vec3(dot(c2,vec3(0.299,0.587,0.114))),c2,uSat);}
   vec3 k=d5.xyz*uSF;float ph=d5.w*uSF;
   float wa=d6.x,flag=d6.y,sd=d6.z,coh=d6.w;
+  float vz=1.0,fz=1.0;   // this splat's own size and spatial-frequency factors
+  if((uSizeVar>0.0||uSFVar>0.0)&&flag<0.5){
+    // each splat holds one draw, then turns smoothly into its next one; the turn keeps the spread the same throughout
+    uint id=floatBitsToUint(sd);
+    float tt=uRedraw+u01(id^0x51ed27u),fl=floor(tt),th2=1.5707963*smoothstep(0.0,1.0,tt-fl);
+    vec2 z=clamp(gauss2(id+uint(fl)*2654435761u)*cos(th2)+gauss2(id+uint(fl+1.0)*2654435761u)*sin(th2),-2.0,2.0);
+    vz=exp(uSizeVar*z.x);sc*=vz;fz=exp(uSFVar*z.y);
+    op/=max(1.0,vz*sqrt(vz));   // a splat that swells thins out, or the few largest would bury the scene
+  }
   vec2 corner=vec2(float(gl_VertexID&1),float((gl_VertexID>>1)&1))*2.0-1.0;
   vUV=vec2(0.0);vKq=vec2(0.0);vPhase=0.0;vAmp=0.0;vC1=vec3(0.0);vC2=vec3(0.0);vPar=vec4(0.0);vR2=0.0;
   if(flag>0.5&&flag<1.5){
@@ -708,7 +742,7 @@ void main(){
     ph=dot(k,pos);
     op=mix(op,0.92*step(sd,0.021),ap);
     if(op<0.004){gl_Position=vec4(2.0,2.0,2.0,1.0);return;}
-    sc=mix(sc,clamp(sc*11.0,vec3(0.06),vec3(0.3))*vec3(1.0,1.0,0.45)*uSigma,ap);
+    sc=mix(sc,clamp(sc*11.0/vz,vec3(0.06),vec3(0.3))*vec3(1.0,1.0,0.45)*uSigma*vz,ap);
     vec3 md=0.5*(c1+c2),dl=0.5*(c1-c2)*mix(1.0,2.4,ap);c1=md+dl;c2=md-dl;
     pos*=1.0+uSpread*5.0;
   }else if(coh>0.5){
@@ -719,6 +753,7 @@ void main(){
     if(op<0.004){gl_Position=vec4(2.0,2.0,2.0,1.0);return;}
     pos*=1.0+uSpread*5.0;
   }
+  k*=fz;   // applied after the phase is set, so each splat keeps its phase at its own centre and only its stripe width changes
   vec3 pc=toCam(pos-uCamPos);
   if(pc.z<0.25){gl_Position=vec4(2.0,2.0,2.0,1.0);return;}
   // covariance in a frame whose third axis is the viewing ray
@@ -783,7 +818,7 @@ const prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,VS));gl.a
 gl.bindAttribLocation(prog,0,'aIndex');gl.linkProgram(prog);
 if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog));
 gl.useProgram(prog);
-const U={};for(const n of['uData','uCamPos','uR','uU','uF','uAxis','uFog','uViewport','uOffset','uFocal','uTime','uTheta','uWave','uCarrier','uEnv','uAxisMode','uSpread','uPort','uSat','uFogK','uSigma','uSF','uContrast','uGray','uCol'])U[n]=gl.getUniformLocation(prog,n);
+const U={};for(const n of['uData','uCamPos','uR','uU','uF','uAxis','uFog','uViewport','uOffset','uFocal','uTime','uTheta','uWave','uCarrier','uEnv','uAxisMode','uSpread','uPort','uSat','uSizeVar','uSFVar','uRedraw','uFogK','uSigma','uSF','uContrast','uGray','uCol'])U[n]=gl.getUniformLocation(prog,n);
 
 gl.activeTexture(gl.TEXTURE0);gl.uniform1i(U.uData,0);
 
@@ -888,7 +923,7 @@ function fractalBuild(tg,viewR){
   const sc=SC.fract,data=FR.data,P=sc.P,cap=FR.cap,D=S.nest-1,k0=TAU/0.8,open=[0];
   for(let l=1;l<=D;l++)open[l]=nestOpen(l);
   let n=0;
-  function emit(cx,cy,cz,sig,al){
+  function emit(cx,cy,cz,sig,al,id){
     al*=Math.exp(-Math.max(0,tg[2]-cz)/(viewR*0.3));   // pieces behind the one in focus fade into the gray
     if(n>=cap||al<0.012)return;
     const o=n*STRIDE;
@@ -898,20 +933,20 @@ function fractalBuild(tg,viewR){
     data[o+12]=data[o+13]=data[o+14]=1;data[o+15]=sig*0.1;   // thin along the view axis: a fat many-cycle Gabor vanishes a few degrees off axis
     data[o+16]=data[o+17]=data[o+18]=0;data[o+19]=1;
     data[o+20]=k0;data[o+21]=0;data[o+22]=0;data[o+23]=0;
-    data[o+24]=0;data[o+25]=0;data[o+26]=0.5;data[o+27]=1;
+    data[o+24]=0;data[o+25]=0;data[o+26]=(id*0.6180339887)%1;data[o+27]=1;
     P[n*3]=cx;P[n*3+1]=cy;P[n*3+2]=cz;n++;
   }
-  function node(cx,cy,cz,lev,al){
+  function node(cx,cy,cz,lev,al,id){
     const sig=1.25*Math.pow(FR.ratio,lev);
     if(Math.max(Math.abs(cx-tg[0]),Math.abs(cy-tg[1]))-sig*5.5>viewR)return;   // whole branch is out of frame
-    if(lev===D){emit(cx,cy,cz,sig,al);return;}
+    if(lev===D){emit(cx,cy,cz,sig,al,id);return;}
     const e=open[lev+1],t=clamp(e/0.12,0,1);
-    if(t<1)emit(cx,cy,cz,sig,al*(1-t));
+    if(t<1)emit(cx,cy,cz,sig,al*(1-t),id);
     if(t<=0)return;
     const off=0.5*sig*(1+NEST_E*e);
-    for(let i=-1;i<=1;i+=2)for(let j=-1;j<=1;j+=2)for(let k=-1;k<=1;k+=2)node(cx+i*off,cy+j*off,cz+k*off,lev+1,al*t);
+    let c=0;for(let i=-1;i<=1;i+=2)for(let j=-1;j<=1;j+=2)for(let k=-1;k<=1;k+=2)node(cx+i*off,cy+j*off,cz+k*off,lev+1,al*t,id*8+(++c));
   }
-  node(0,0,0,0,1);
+  node(0,0,0,0,1,1);
   sc.N=n;
   if(n>0){gl.bindTexture(gl.TEXTURE_2D,sc.tex);gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,PER_ROW*TEXELS,Math.ceil(n/PER_ROW),gl.RGBA,gl.FLOAT,data,0);}
 }
@@ -970,7 +1005,7 @@ function exitVR(){
 document.addEventListener('fullscreenchange',()=>{if(VR.on&&VR.fs&&!document.fullscreenElement)exitVR();});
 window.addEventListener('keydown',e=>{if(!VR.on)return;if(e.key===' '||e.key==='Enter'){VR.moving=!VR.moving;e.preventDefault();}else if(e.key==='Escape')exitVR();});
 let presetsReady=false;const presetBy={grove:0,gabor:0,portrait:0};
-const S={nest:1,col:0,stereo:0,depth:0.4,swap:false,scene:'grove',spread:0,spreadEff:0,bsweep:0,bsAmp:0,bsPhase:0,sigEff:1,sat:0,psweep:0,psAmp:0,psPhase:0,sigma:1,sf:1,sfEff:1,sweep:0,sweepAmp:0,sweepPhase:0,con:1,conEff:1,csweep:0,csAmp:0,csPhase:0,theta:0,speed:6,playing:!reduce,wave:0,waveT:0,axis:0,carrier:1,carrierT:1,env:0,auto:!reduce,idle:99};
+const S={nest:1,col:0,stereo:0,depth:0.4,swap:false,scene:'grove',spread:0,spreadEff:0,bsweep:0,bsAmp:0,bsPhase:0,sigEff:1,sat:0,svar:0,fvar:0,svarEff:0,fvarEff:0,vsweep:0,vsAmp:0,vsPhase:0,redraw:0,rdPhase:0,psweep:0,psAmp:0,psPhase:0,sigma:1,sf:1,sfEff:1,sweep:0,sweepAmp:0,sweepPhase:0,con:1,conEff:1,csweep:0,csAmp:0,csPhase:0,theta:0,speed:6,playing:!reduce,wave:0,waveT:0,axis:0,carrier:1,carrierT:1,env:0,auto:!reduce,idle:99};
 let W=1,Hh=1,scale=Math.min(window.devicePixelRatio||1,2),dockShift=0,dockSm=0,drawerTy=0;
 const dock=document.getElementById('dock');
 function resize(){
@@ -1051,6 +1086,11 @@ $('con').addEventListener('input',e=>{S.con=Math.pow(10,-2+2*(+e.target.value)/1
 $('csweep').addEventListener('input',e=>{const v=+e.target.value;S.csweep=sweepRate(v);if(v===0)S.csPhase=0;$('csweepOut').textContent=v===0?'off':Math.round(1/S.csweep)+' s';});
 $('pull').addEventListener('input',e=>{S.spread=+e.target.value/100;});
 $('bsweep').addEventListener('input',e=>{const v=+e.target.value;S.bsweep=sweepRate(v);if(v===0)S.bsPhase=0;$('bsweepOut').textContent=v===0?'off':Math.round(1/S.bsweep)+' s';});
+// variance: every splat draws its own size and spatial frequency from a log-normal spread around the slider value; the sliders set its SD, up to 1.5 octaves
+$('svar').addEventListener('input',e=>{S.svar=1.5*(+e.target.value)/100;});
+$('fvar').addEventListener('input',e=>{S.fvar=1.5*(+e.target.value)/100;});
+$('vsweep').addEventListener('input',e=>{const v=+e.target.value;S.vsweep=sweepRate(v);if(v===0)S.vsPhase=0;$('vsweepOut').textContent=v===0?'off':Math.round(1/S.vsweep)+' s';});
+$('redraw').addEventListener('input',e=>{const v=+e.target.value;S.redraw=v===0?0:0.05*Math.pow(80,(v-1)/99);$('redrawOut').textContent=v===0?'frozen':(S.redraw<1?S.redraw.toFixed(2):S.redraw.toFixed(1))+'/s';});
 $('sat').addEventListener('input',e=>{S.sat=+e.target.value/100;$('satOut').textContent=e.target.value+'%';});
 $('col').addEventListener('input',e=>{S.col=+e.target.value/100;$('colOut').textContent=e.target.value+'%';});
 /* ---------- portrait: a Scaniverse Gaussian-splat scan, loaded on demand and turned into Gabor splats ----------
@@ -1240,7 +1280,7 @@ const maxScale=scale;
 function frame(now){
   const dt=Math.min(0.05,(now-last)/1000);last=now;
   if(dt>0.030){slow++;fast=0;}else if(dt<0.019){fast++;slow=Math.max(0,slow-1);}
-  if(slow>24&&scale>0.6){scale=Math.max(0.6,scale*0.8);slow=0;resize();}
+  if(slow>24&&scale>0.6&&!S.lockScale){scale=Math.max(0.6,scale*0.8);slow=0;resize();}
   if(S.playing)S.theta+=S.speed*Math.PI/180*dt;
   // spatial-frequency sweep: one octave either side of the slider value, on a log axis
   if(S.playing)S.sweepPhase+=TAU*S.sweep*dt;
@@ -1252,6 +1292,12 @@ function frame(now){
   S.bsAmp+=((S.bsweep>0?1:0)-S.bsAmp)*Math.min(1,dt*2.5);
   S.sigEff=S.sigma*Math.pow(2.4,S.bsAmp*Math.sin(S.bsPhase));
   $('psfOut').textContent=S.sigEff.toFixed(2)+'×';
+  // variance sweep: both spreads open from nothing (every splat alike) to the slider values and close again; redraw rate is how often each splat draws afresh
+  if(S.playing){S.vsPhase+=TAU*S.vsweep*dt;S.rdPhase+=S.redraw*dt;}
+  S.vsAmp+=((S.vsweep>0?1:0)-S.vsAmp)*Math.min(1,dt*2.5);
+  const vg=1-S.vsAmp*(0.5+0.5*Math.cos(S.vsPhase));
+  S.svarEff=S.svar*vg;S.fvarEff=S.fvar*vg;
+  $('svarOut').textContent=S.svarEff<0.005?'0':S.svarEff.toFixed(2)+' oct';$('fvarOut').textContent=S.fvarEff<0.005?'0':S.fvarEff.toFixed(2)+' oct';
   // contrast sweep: log-sinusoid between the slider value (peak) and a 1% floor
   if(S.playing)S.csPhase+=TAU*S.csweep*dt;
   S.csAmp+=((S.csweep>0?1:0)-S.csAmp)*Math.min(1,dt*2.5);
@@ -1294,7 +1340,7 @@ function draw(t){
   gl.uniform3f(U.uCamPos,pos[0],pos[1],pos[2]);gl.uniform3f(U.uR,rt[0],rt[1],rt[2]);gl.uniform3f(U.uU,upv[0],upv[1],upv[2]);gl.uniform3f(U.uF,fw[0],fw[1],fw[2]);
   gl.uniform2f(U.uViewport,W,Hh);const yoff=portrait?dockSm*0.9:dockSm*0.45;
   const focal=0.5*Math.min(Hh,W*1.45)/Math.tan(24*Math.PI/180);gl.uniform1f(U.uFocal,focal);gl.uniform1f(U.uGray,st?1:0);
-  gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,fr?0:spread);gl.uniform1f(U.uSigma,S.sigEff);gl.uniform1f(U.uPort,S.scene==='portrait'?1:0);gl.uniform1f(U.uSat,S.scene==='portrait'?S.sat:1);gl.uniform1f(U.uSF,S.sfEff*(fr?nestSF():1));gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,S.scene==='grove'?0.10:0);
+  gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);gl.uniform1f(U.uSpread,fr?0:spread);gl.uniform1f(U.uSigma,S.sigEff);gl.uniform1f(U.uPort,S.scene==='portrait'?1:0);gl.uniform1f(U.uSat,S.scene==='portrait'?S.sat:1);gl.uniform1f(U.uSizeVar,S.svarEff*Math.LN2);gl.uniform1f(U.uSFVar,S.fvarEff*Math.LN2);gl.uniform1f(U.uRedraw,S.rdPhase);gl.uniform1f(U.uSF,S.sfEff*(fr?nestSF():1));gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);gl.uniform1f(U.uFogK,S.scene==='grove'?0.10:0);
   if(!st){gl.uniform2f(U.uOffset,0,yoff);gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,vis);}
   else{
     // off-axis stereo pair: eyes sit either side of the camera, frusta sheared so the orbit target has zero disparity
@@ -1351,7 +1397,7 @@ function drawVR(t,dt){
   gl.uniform2f(U.uViewport,hw,Hh);gl.uniform2f(U.uOffset,0,0);gl.uniform1f(U.uFocal,focal);gl.uniform1f(U.uGray,0);
   
   gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTheta,S.theta);gl.uniform1f(U.uWave,S.wave);gl.uniform1f(U.uCarrier,S.carrier);gl.uniform1f(U.uEnv,S.env);gl.uniform1f(U.uAxisMode,S.axis);
-  gl.uniform1f(U.uSpread,fr?0:spread);gl.uniform1f(U.uSigma,S.sigEff);gl.uniform1f(U.uPort,S.scene==='portrait'?1:0);gl.uniform1f(U.uSat,S.scene==='portrait'?S.sat:1);gl.uniform1f(U.uSF,S.sfEff*(fr?nestSF():1));gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform1f(U.uFogK,S.scene==='grove'?0.10:0);
+  gl.uniform1f(U.uSpread,fr?0:spread);gl.uniform1f(U.uSigma,S.sigEff);gl.uniform1f(U.uPort,S.scene==='portrait'?1:0);gl.uniform1f(U.uSat,S.scene==='portrait'?S.sat:1);gl.uniform1f(U.uSizeVar,S.svarEff*Math.LN2);gl.uniform1f(U.uSFVar,S.fvarEff*Math.LN2);gl.uniform1f(U.uRedraw,S.rdPhase);gl.uniform1f(U.uSF,S.sfEff*(fr?nestSF():1));gl.uniform1f(U.uContrast,S.conEff);gl.uniform1f(U.uCol,S.col);gl.uniform1f(U.uFogK,S.scene==='grove'?0.10:0);
   gl.uniform3f(U.uAxis,AXIS[S.scene][0],AXIS[S.scene][1],AXIS[S.scene][2]);
   for(let e=0;e<2;e++){
     const sg=e===0?-1:1,h=sg*VR.ipd/2;
@@ -1392,12 +1438,14 @@ const PRESETS={
     {name:'Kaleidoscope',speed:12,wave:1,sf:-10,sweep:55,col:80},
     {name:'Zebra',speed:18,sf:-45},
     {name:'Pointillist',speed:6,psf:-70,sf:40,col:40},
+    {name:'Jitter',speed:6,sv:40,fv:55,rd:45,col:50},
     {name:'Melt',speed:9,wave:1,world:1,env:1},
     {name:'Pulse',speed:4,sweep:70,cs:80},
     {name:'Calm',speed:6}],
   gabor:[
     {name:'Assemble',speed:3,world:1,sf:50,pull:100,ps:62,view:[0,0,10]},
     {name:'Nested',speed:3,world:1,sf:50,nest:5,pull:100,ps:31,view:[0,0,10]},
+    {name:'Jitter',speed:6,world:1,sv:55,fv:45,vs:55,rd:40,pull:50},
     {name:'Twist',speed:14,world:1,wave:1,col:70},
     {name:'Shatter',speed:16,col:60},
     {name:'Zoom',speed:8,world:1,sweep:77},
@@ -1407,6 +1455,7 @@ const PRESETS={
     {name:'Assemble',speed:5,world:1,pull:100,ps:58},
     {name:'Trip',speed:16,world:1,wave:1,sf:-10,sweep:60,col:100,bs:62,pull:55,ps:45},
     {name:'Breathe',speed:6,world:1,bs:70,sf:-20},
+    {name:'Jitter',speed:5,world:1,sv:50,fv:45,vs:50,rd:45,pull:45},
     {name:'Engraved',speed:2,world:1,con:85},
     {name:'Kaleidoscope',speed:12,world:1,wave:1,sf:-10,sweep:55,col:80},
     {name:'Pointillist',speed:6,world:1,psf:-55,sf:20,col:40,sat:100},
@@ -1431,12 +1480,12 @@ function applyPreset(i){
   const setV=(id,v)=>{const e=$(id);e.value=v;e.dispatchEvent(new Event('input'));};
   const pick=id=>{const e=$(id);e.checked=true;e.dispatchEvent(new Event('change'));};
   const setC=(id,on)=>{const e=$(id);if(e.checked!==on){e.checked=on;e.dispatchEvent(new Event('change'));}};
-  setV('speed',p.speed);setV('psf',p.psf||0);setV('bsweep',p.bs||0);setV('sat',p.sat||0);setV('sf',p.sf||0);setV('sweep',p.sweep||0);
+  setV('speed',p.speed);setV('psf',p.psf||0);setV('bsweep',p.bs||0);setV('sat',p.sat||0);setV('svar',p.sv||0);setV('fvar',p.fv||0);setV('vsweep',p.vs||0);setV('redraw',p.rd||0);setV('sf',p.sf||0);setV('sweep',p.sweep||0);
   setV('con',p.con===undefined?100:p.con);setV('csweep',p.cs||0);setV('pull',p.pull||0);setV('psweep',p.ps||0);setV('col',p.col||0);setV('nest',p.nest||1);
   if(p.view){cam.yaw=p.view[0];cam.pitch=p.view[1];cam.dist=p.view[2];}else if(S.scene==='gabor'){cam.yaw=0;cam.pitch=0;cam.dist=10;}
   pick(p.wave?'spinWave':'spinTogether');pick(p.world?'axisWorld':'axisSurface');
   setC('env',!!p.env);setC('carriers',true);
-  S.sweepPhase=0;S.csPhase=0;S.psPhase=0;S.bsPhase=0;
+  S.sweepPhase=0;S.csPhase=0;S.psPhase=0;S.bsPhase=0;S.vsPhase=0;
   markPreset(i);
 }
 // a hand-made change means the view no longer matches a preset
@@ -1454,7 +1503,7 @@ drawer.set(matchMedia('(min-width:640px) and (min-aspect-ratio:5/4)').matches);
         MIDI CC 40.. (one per output), when MIDI is connected */
 const CV_IN=[['speed','speed','Rotation speed'],['pointSpread','psf','Point spread'],['spatialFreq','sf','Spatial frequency'],['sfSweep','sweep','SF sweep'],
   ['colorByAngle','col','Color by angle'],['contrast','con','Contrast'],['contrastSweep','csweep','Contrast sweep'],['pullApart','pull','Pull apart'],
-  ['pullSweep','psweep','Pull sweep'],['nesting','nest','Nesting'],['depth3d','depth','3D depth'],['lens','lens','Lens correction'],['angle',null,'Carrier angle'],['scene',null,'Tab'],['spreadSweep','bsweep','Spread sweep'],['scanColor','sat','Scan color']];
+  ['pullSweep','psweep','Pull sweep'],['nesting','nest','Nesting'],['depth3d','depth','3D depth'],['lens','lens','Lens correction'],['angle',null,'Carrier angle'],['scene',null,'Tab'],['spreadSweep','bsweep','Spread sweep'],['scanColor','sat','Scan color'],['sizeVariance','svar','Size variance'],['sfVariance','fvar','SF variance'],['varianceSweep','vsweep','Variance sweep'],['redrawRate','redraw','Redraw rate']];
 const CV_OUT=['angle','angleSin','spatialFreq','contrast','pullApart'];
 const CV={base:{},mod:{},dirty:new Set(),peers:new Set(),bc:null,midi:null,lastIn:0,lastOut:0,count:0,sent:{}};
 const cvEl=name=>{const r=CV_IN.find(x=>x[0]===name);return r&&r[1]?$(r[1]):null;};

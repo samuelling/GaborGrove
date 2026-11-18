@@ -16,9 +16,9 @@ VR head tracking needs the page served over HTTPS as a top-level page (for examp
 
 Each tab opens in its first preset; the pills under the tabs switch between them. A preset just sets the controls below, and changing any control by hand clears the highlight.
 
-- **Mushroom grove** — Kaleidoscope (default), Zebra, Pointillist, Melt, Pulse, Calm.
-- **Gabor of Gabors** — Assemble (default), Nested, Twist, Shatter, Zoom, Swarm, Classic. Nested runs the multi-scale cascade described under Nesting. Assemble starts with the small Gabors pulled apart, draws them together into the one big Gabor, holds, and repeats.
-- **Portrait** — Assemble (default), Trip, Breathe, Engraved, Kaleidoscope, Pointillist, Shatter, Melt, In color, Faithful. All but Pointillist, In color and Faithful are grayscale. Assemble starts as a cloud of separate Gabor patches and draws them together into the face; Trip sweeps pull, point spread and spatial frequency at once with angle-driven colour; Breathe sweeps the point spread; Faithful fades the carriers out, so it is the plain scan in colour.
+- **Mushroom grove** — Kaleidoscope (default), Zebra, Pointillist, Jitter, Melt, Pulse, Calm. Jitter turns on size and SF variance with a slow redraw; it is in every tab.
+- **Gabor of Gabors** — Assemble (default), Nested, Jitter, Twist, Shatter, Zoom, Swarm, Classic. Nested runs the multi-scale cascade described under Nesting. Assemble starts with the small Gabors pulled apart, draws them together into the one big Gabor, holds, and repeats.
+- **Portrait** — Assemble (default), Trip, Breathe, Jitter, Engraved, Kaleidoscope, Pointillist, Shatter, Melt, In color, Faithful. All but Pointillist, In color and Faithful are grayscale. Assemble starts as a cloud of separate Gabor patches and draws them together into the face; Trip sweeps pull, point spread and spatial frequency at once with angle-driven colour; Breathe sweeps the point spread; Faithful fades the carriers out, so it is the plain scan in colour.
 
 ## Make your own portrait
 
@@ -46,6 +46,10 @@ The controls sit in a shelf that slides up from the bottom edge and stops below 
 - **Spread sweep** — swells and shrinks every envelope together, up to 2.4× either side of the Point spread value, on a log axis.
 - **Spatial freq** — scales every carrier's frequency (0.25× to 4×).
 - **SF sweep** — oscillates spatial frequency one octave either side of the slider value.
+- **Size variance** — gives every splat its own envelope size, drawn at random from a log-normal spread centred on the Point spread value. The slider is the spread's SD, from 0 to 1.5 octaves (draws are clipped at 2 SD). A splat that swells also thins out, so the few largest do not bury the scene.
+- **SF variance** — the same for spatial frequency: every splat draws its own carrier frequency around the Spatial freq value, SD up to 1.5 octaves. Each splat keeps its phase at its own centre, so a phase-locked whole (the big Gabor, the portrait) stays roughly together while assembled; the differences show most once it is pulled apart.
+- **Variance sweep** — opens both spreads from zero (every splat alike) to the slider values and closes them again.
+- **Redraw rate** — how often each splat draws afresh, 0.05 to 4 times a second, or frozen. Each splat turns smoothly from one draw into the next, out of step with its neighbours.
 - **Contrast** — carrier contrast, 1% to 100% on a log axis. In the grove this is texture contrast; object colour and shading stay.
 - **Contrast sweep** — log-sinusoid between the slider value and a 1% floor.
 - **Color by angle** — tints the two carrier phases with opponent colours whose hue follows the carrier angle (180° of orientation spans the hue circle).
@@ -77,7 +81,7 @@ addEventListener('message', e => {
 });
 ```
 
-- **Inputs:** `speed`, `pointSpread`, `spatialFreq`, `sfSweep`, `colorByAngle`, `contrast`, `contrastSweep`, `pullApart`, `pullSweep`, `nesting`, `depth3d`, `lens`, `angle` (the carrier angle itself, one turn per 0..1), `scene` (below 0.5 grove, above Gabor of Gabors), `spreadSweep`, `scanColor`.
+- **Inputs:** `speed`, `pointSpread`, `spatialFreq`, `sfSweep`, `colorByAngle`, `contrast`, `contrastSweep`, `pullApart`, `pullSweep`, `nesting`, `depth3d`, `lens`, `angle` (the carrier angle itself, one turn per 0..1), `scene` (below 0.5 grove, above Gabor of Gabors), `spreadSweep`, `scanColor`, `sizeVariance`, `sfVariance`, `varianceSweep`, `redrawRate`.
 - **Outputs:** `angle`, `angleSin`, `spatialFreq`, `contrast`, `pullApart`.
 - A slider moved by hand, or set with `gg:set`, becomes the centre that `gg:mod` swings around.
 - Pages on the same origin can use `new BroadcastChannel('gabor-grove')` with the same messages.
