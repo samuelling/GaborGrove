@@ -884,7 +884,10 @@ function sizeHDR(w,h){
   document.body.classList.toggle('lin',HDR.ok);
 }
 const vao=gl.createVertexArray();gl.bindVertexArray(vao);
-const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,Math.max(SC.grove.N,SC.gabor.N,65536)*4,gl.DYNAMIC_DRAW);
+let bufCap=Math.max(SC.grove.N,SC.gabor.N,65536);
+const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,bufCap*4,gl.DYNAMIC_DRAW);
+// the draw-order buffer grows to fit whatever scene is on screen; a scan can hold more splats than the built-in scenes
+function fitBuf(n){gl.bindBuffer(gl.ARRAY_BUFFER,buf);if(n>bufCap){bufCap=Math.ceil(n*1.25);gl.bufferData(gl.ARRAY_BUFFER,bufCap*4,gl.DYNAMIC_DRAW);}}
 gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,1,gl.FLOAT,false,0,0);gl.vertexAttribDivisor(0,1);
 gl.disable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
 gl.uniform3f(U.uFog,0.115,0.205,0.25);
@@ -1415,7 +1418,7 @@ function draw(t){
   if(fr)fractalBuild(tgt,dist*0.85);
   const vis=sortSplats(sc,pos,fw,fr?1:1+spread*5);
   gl.bindTexture(gl.TEXTURE_2D,sc.tex);
-  gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferSubData(gl.ARRAY_BUFFER,0,sc.order,0,vis);
+  fitBuf(sc.N);gl.bufferSubData(gl.ARRAY_BUFFER,0,sc.order,0,vis);
   if(isG)sizeHDR(W,Hh);
   const hdr=isG&&HDR.ok;
   gl.bindFramebuffer(gl.FRAMEBUFFER,hdr?HDR.fbo:null);
@@ -1471,7 +1474,7 @@ function drawVR(t,dt){
   if(fr)fractalBuild(nestTarget(),1e9);
   const vis=sortSplats(sc,P,fw,fr?1:1+spread*5);
   gl.bindTexture(gl.TEXTURE_2D,sc.tex);
-  gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferSubData(gl.ARRAY_BUFFER,0,sc.order,0,vis);
+  fitBuf(sc.N);gl.bufferSubData(gl.ARRAY_BUFFER,0,sc.order,0,vis);
   if(isG||VR.lens>0)sizeHDR(W,Hh);
   const lensOn=VR.lens>0&&HDR.ok,hdr=HDR.ok&&(isG||lensOn),hw=W>>1;
   gl.bindFramebuffer(gl.FRAMEBUFFER,hdr?HDR.fbo:null);
