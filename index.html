@@ -134,9 +134,13 @@ body.vr #gl{cursor:default}
 .modal li{counter-increment:step;position:relative;padding-left:38px;font-size:14.5px;line-height:1.45}
 .modal li::before{content:counter(step);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:var(--glow);color:#06201b;font-family:var(--mono);font-weight:500;font-size:13px;display:flex;align-items:center;justify-content:center}
 .modal li strong,.modal p strong{font-weight:500;color:var(--glow)}
-.modal .go{display:block;width:100%;margin:16px 0 6px;padding:12px 16px;min-height:48px;background:var(--cap);border-color:var(--cap);color:#1a0b06;font-weight:500;font-size:15px}
+.modal .go{display:flex;align-items:center;justify-content:center;width:100%;margin:16px 0 8px;padding:12px 16px;min-height:50px;border:1px solid var(--cap);border-radius:999px;background:var(--cap);color:#1a0b06;font-weight:500;font-size:15px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.modal .go.busy{opacity:.55;pointer-events:none}
+.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
+.vh:focus-visible + .go{outline:2px solid var(--glow);outline-offset:2px}
 .modal .note{font-size:13px;color:var(--dim)}
-#howMsg{min-height:1.4em;font-family:var(--mono);font-size:12px;color:var(--glow)}
+#howMsg{min-height:1.4em;margin:0 0 4px;font-family:var(--mono);font-size:12.5px;line-height:1.45;color:var(--glow)}
+#howMsg.bad{color:#ffd9cf;background:rgba(228,88,60,.22);border:1px solid var(--cap);border-radius:10px;padding:9px 12px}
 @media (max-width:520px){
   h1{font-size:22px}
   input[type=range]{height:24px}
@@ -212,7 +216,8 @@ body.vr #gl{cursor:default}
       <li>Tap <strong>Share</strong>, then <strong>Export Model</strong>, then <strong>SPZ</strong>. Save it to Files.</li>
       <li>Tap the button below and pick that file.</li>
     </ol>
-    <button id="howPick" class="go" type="button">Choose your scan file</button>
+    <input id="scanFile" class="vh" type="file">
+    <label id="howPick" class="go" for="scanFile">Choose your scan file</label>
     <p id="howMsg" role="status"></p>
     <h3>Once it loads</h3>
     <p>Drag to orbit until you find the face. If it comes in upside down, tap <strong>Flip</strong> in the row of presets. Every preset and slider works on it.</p>
@@ -1153,12 +1158,63 @@ function buildScan(src,flip){
     return{p:tf([(q[0]-ctr[0])*Ks,(q[1]-ctr[1])*Ks,(q[2]-ctr[2])*Ks]),long:tf(R[ord[0]]),short:tf(R[ord[2]]),s:[sc[ord[0]],sc[ord[1]],sc[ord[2]]],c:src.color(i),a:al[i]};
   });
 }
-async function readSpz(file){
-  if(!window.DecompressionStream)throw new Error('This browser cannot unpack .spz files.');
+/* gzip unpacking written out here, so nothing depends on the browser's own stream decompressor */
+function gunzip(src){
+  if(src.length<18||src[0]!==0x1f||src[1]!==0x8b||src[2]!==8)throw new Error('not gzip');
+  const flg=src[3];let pos=10;
+  if(flg&4)pos+=2+(src[pos]|(src[pos+1]<<8));
+  if(flg&8){while(src[pos++]);}
+  if(flg&16){while(src[pos++]);}
+  if(flg&2)pos+=2;
+  const n=src.length,hint=(src[n-4]|(src[n-3]<<8)|(src[n-2]<<16)|(src[n-1]<<24))>>>0;
+  let out=new Uint8Array(hint>0&&hint<1.2e9?hint:n*4),op=0,bb=0,bc=0;
+  const bits=k=>{if(!k)return 0;while(bc<k){bb|=src[pos++]<<bc;bc+=8;}const v=bb&((1<<k)-1);bb>>>=k;bc-=k;return v;};
+  const grow=k=>{if(op+k>out.length){const o2=new Uint8Array(Math.max(out.length*2,op+k));o2.set(out.subarray(0,op));out=o2;}};
+  // canonical Huffman tables: how many codes of each length, and the symbols in code order
+  const build=(lens,cnt)=>{const count=new Uint16Array(16),offs=new Uint16Array(16),sym=new Uint16Array(cnt);
+    for(let i=0;i<cnt;i++)count[lens[i]]++;count[0]=0;
+    let o=0;for(let i=1;i<16;i++){offs[i]=o;o+=count[i];}
+    for(let i=0;i<cnt;i++)if(lens[i])sym[offs[lens[i]]++]=i;
+    return{count:count,sym:sym};};
+  const decode=t=>{let code=0,first=0,index=0;
+    for(let len=1;len<16;len++){if(!bc){bb=src[pos++];bc=8;}code|=bb&1;bb>>>=1;bc--;const c=t.count[len];
+      if(code-c<first)return t.sym[index+(code-first)];
+      index+=c;first=(first+c)<<1;code<<=1;}
+    throw new Error('corrupt data');};
+  const LB=[3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258],LE=[0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+  const DB=[1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577],DE=[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+  const ORD=[16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+  const codes=(lt,dt)=>{for(;;){let c=decode(lt);
+    if(c<256){if(op>=out.length)grow(1);out[op++]=c;}
+    else if(c===256)return;
+    else{c-=257;if(c>28)throw new Error('corrupt data');const len=LB[c]+bits(LE[c]),dc=decode(dt);if(dc>29)throw new Error('corrupt data');
+      const dist=DB[dc]+bits(DE[dc]);if(dist>op)throw new Error('corrupt data');
+      grow(len);for(let i=0;i<len;i++,op++)out[op]=out[op-dist];}}};
+  let last,fl=null,fd=null;
+  do{
+    if(pos>=n)throw new Error('truncated');
+    last=bits(1);const type=bits(2);
+    if(type===0){bb=0;bc=0;const len=src[pos]|(src[pos+1]<<8);pos+=4;grow(len);out.set(src.subarray(pos,pos+len),op);op+=len;pos+=len;}
+    else if(type===1){
+      if(!fl){const l=new Uint8Array(288);l.fill(8,0,144);l.fill(9,144,256);l.fill(7,256,280);l.fill(8,280,288);fl=build(l,288);fd=build(new Uint8Array(30).fill(5),30);}
+      codes(fl,fd);}
+    else if(type===2){
+      const nl=bits(5)+257,nd=bits(5)+1,nc=bits(4)+4,cl=new Uint8Array(19);
+      for(let i=0;i<nc;i++)cl[ORD[i]]=bits(3);
+      const ct=build(cl,19),lens=new Uint8Array(nl+nd);let i=0;
+      while(i<nl+nd){const c=decode(ct);
+        if(c<16)lens[i++]=c;
+        else{let prev=0,r;if(c===16){if(!i)throw new Error('corrupt data');prev=lens[i-1];r=3+bits(2);}else if(c===17)r=3+bits(3);else r=11+bits(7);
+          if(i+r>nl+nd)throw new Error('corrupt data');while(r--)lens[i++]=prev;}}
+      codes(build(lens.subarray(0,nl),nl),build(lens.subarray(nl),nd));}
+    else throw new Error('corrupt data');
+  }while(!last);
+  return out.subarray(0,op);
+}
+function readSpz(u8){
   let raw;
-  try{raw=new Uint8Array(await new Response(file.stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());}
-  catch(err){throw new Error('That file is not a splat scan. Export SPZ from Scaniverse.');}
-  const dv=new DataView(raw.buffer);
+  try{raw=gunzip(u8);}catch(err){throw new Error('That file could not be unpacked ('+err.message+'). Export it again as SPZ from Scaniverse.');}
+  const dv=new DataView(raw.buffer,raw.byteOffset,raw.byteLength);
   if(raw.length<16||dv.getUint32(0,true)!==0x5053474e)throw new Error('That file is not a splat scan. Export SPZ from Scaniverse.');
   const ver=dv.getUint32(4,true),n=dv.getUint32(8,true),shDim=[0,3,8,15][raw[12]]||0,fb=raw[13],rb=ver>=3?4:3;
   if(ver<2||ver>3)throw new Error('This .spz is version '+ver+'; only versions 2 and 3 are supported. Try exporting PLY instead.');
@@ -1175,9 +1231,8 @@ async function readSpz(file){
       for(let k=3;k>=0;k--){if(k===big)continue;const m=(u&511)/511*Math.SQRT1_2,v=((u>>>9)&1)?-m:m;qq[k]=v;ss+=v*v;u>>>=10;}
       qq[big]=Math.sqrt(Math.max(0,1-ss));return qq;}};
 }
-async function readPly(file){
-  if(file.size>600e6)throw new Error('That .ply is too large to open here. Crop the scan first.');
-  const buf=await file.arrayBuffer(),u8=new Uint8Array(buf);
+function readPly(u8){
+  const buf=u8.buffer;
   // the header is text, ending with end_header and a newline
   let end=-1;const lim=Math.min(u8.length,20000),mark=[101,110,100,95,104,101,97,100,101,114];
   for(let i=0;i<lim-mark.length;i++){let ok=true;for(let k=0;k<mark.length;k++)if(u8[i+k]!==mark[k]){ok=false;break;}if(ok){end=i+mark.length;break;}}
@@ -1201,36 +1256,50 @@ async function readPly(file){
     scale:i=>[Math.exp(g(i,'scale_0')),Math.exp(g(i,'scale_1')),Math.exp(g(i,'scale_2'))],
     quat:i=>{const w=g(i,'rot_0'),x=g(i,'rot_1'),y=g(i,'rot_2'),z=g(i,'rot_3'),m=Math.hypot(w,x,y,z)||1;return[x/m,y/m,z/m,w/m];}};
 }
-async function readScan(file){
-  const h=new Uint8Array(await file.slice(0,4).arrayBuffer());
-  if(h[0]===0x1f&&h[1]===0x8b)return readSpz(file);
-  if(h[0]===112&&h[1]===108&&h[2]===121)return readPly(file);
-  throw new Error('That file is not a splat scan. Export SPZ from Scaniverse.');
+function readScan(u8){
+  if(u8[0]===0x1f&&u8[1]===0x8b)return readSpz(u8);
+  if(u8[0]===112&&u8[1]===108&&u8[2]===121)return readPly(u8);
+  throw new Error('That file is not a splat scan. In Scaniverse use Share, Export Model, SPZ.');
 }
-// no accept filter on the picker: phones grey out file types they do not know, and .spz is one of them
-const scanInput=document.createElement('input');scanInput.type='file';scanInput.hidden=true;document.body.appendChild(scanInput);
 function showScan(){portraitLoad=Promise.resolve();portraitOwn=true;setScene('portrait',true);}
-scanInput.addEventListener('change',()=>{
-  const f=scanInput.files&&scanInput.files[0];if(!f)return;
-  const say=t=>{$('howMsg').textContent=t;$('count').textContent=t;};
-  say('Reading your scan…');
-  // let the message paint before the heavy work starts
-  new Promise(r=>setTimeout(r,60)).then(()=>readScan(f)).then(src=>{buildScan(src,src.flip);scanSrc=src;scanSrc.flipped=src.flip;
-      cams.portrait.yaw=0;cams.portrait.pitch=0.04;cams.portrait.dist=8.2;cams.portrait.target=[0,0,0];$('howMsg').textContent='';howSet(false);showScan();})
-    .catch(err=>{say(err&&err.message?err.message:'That scan could not be read.');});
-  scanInput.value='';
-});
+// the whole file is copied into memory before anything else happens, and the picker is only cleared afterwards:
+// a phone may withdraw a picked file once the input lets go of it
+const scanInput=$('scanFile');
+const fileBytes=f=>f.arrayBuffer?f.arrayBuffer():new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=()=>no(r.error||new Error('read failed'));r.readAsArrayBuffer(f);});
+const paint=()=>new Promise(r=>setTimeout(r,50));   // let a status line reach the screen before heavy work
+let scanBusy=false;
+async function openScan(f){
+  if(scanBusy)return;scanBusy=true;$('howPick').classList.add('busy');
+  const say=(t,bad)=>{$('howMsg').textContent=t;$('howMsg').classList.toggle('bad',!!bad);if(!bad)$('count').textContent=t;};
+  const mb=(f.size/1048576).toFixed(1)+' MB';let stage='reading';
+  try{
+    if(f.size>600e6)throw new Error('That file is too large to open here ('+mb+'). Crop the scan first.');
+    if(!f.size)throw new Error('That file is empty. Export it again from Scaniverse.');
+    say('Reading '+(f.name||'file')+' ('+mb+')…');await paint();
+    const u8=new Uint8Array(await fileBytes(f));
+    stage='unpacking';say('Unpacking '+mb+'…');await paint();
+    const src=readScan(u8);
+    stage='building';say('Building '+Math.min(src.n,SCAN_MAX).toLocaleString('en-US')+' Gabor splats…');await paint();
+    buildScan(src,src.flip);scanSrc=src;scanSrc.flipped=src.flip;
+    cams.portrait.yaw=0;cams.portrait.pitch=0.04;cams.portrait.dist=8.2;cams.portrait.target=[0,0,0];
+    say('');howSet(false);showScan();
+  }catch(err){
+    const known=err&&err.message&&/^(That|This|The|Only) /.test(err.message);
+    say(known?err.message:'Something went wrong while '+stage+' the file: '+(err&&(err.name||'')+' '+(err.message||err))+'.',true);
+    caption();
+  }finally{scanBusy=false;$('howPick').classList.remove('busy');scanInput.value='';}
+}
+scanInput.addEventListener('change',()=>{const f=scanInput.files&&scanInput.files[0];if(f)openScan(f);});
 function flipScan(){if(!scanSrc)return;scanSrc.flipped=!scanSrc.flipped;try{buildScan(scanSrc,scanSrc.flipped);}catch(err){return;}const keep=presetBy.portrait;showScan();if(keep!==presetBy.portrait)applyPreset(keep);}
 /* the how-to sheet for making your own scan */
 let howFrom=null;
 function howSet(open){
   if(open===!$('how').hidden)return;
-  if(open){howFrom=document.activeElement;$('howMsg').textContent='';$('how').hidden=false;$('how').scrollTop=0;$('howClose').focus();}
+  if(open){howFrom=document.activeElement;$('howMsg').textContent='';$('howMsg').classList.remove('bad');$('how').hidden=false;$('how').scrollTop=0;$('howClose').focus();}
   else{$('how').hidden=true;if(howFrom&&howFrom.isConnected&&howFrom.focus)howFrom.focus();}
 }
 $('howClose').addEventListener('click',()=>howSet(false));
 $('how').addEventListener('click',e=>{if(e.target===$('how'))howSet(false);});
-$('howPick').addEventListener('click',()=>scanInput.click());
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('how').hidden)howSet(false);});
 function caption(){
   const nn=SC[S.scene].N.toLocaleString('en-US');
@@ -1564,7 +1633,7 @@ $('midiBtn').addEventListener('click',()=>{
     cvSend({type:'gg:ready'});cvDescribe();
   }
 })();
-window.GROVE={CV:CV,drawer:drawer,applyPreset:applyPreset,VR:VR,quatDevice:quatDevice,qrot:qrot,HDR:HDR,S:S,cams:cams,get cam(){return cam;},get count(){return SC[S.scene].N;},setScene:setScene};
+window.GROVE={gunzip:gunzip,CV:CV,drawer:drawer,applyPreset:applyPreset,VR:VR,quatDevice:quatDevice,qrot:qrot,HDR:HDR,S:S,cams:cams,get cam(){return cam;},get count(){return SC[S.scene].N;},setScene:setScene};
 requestAnimationFrame(frame);
 })();
 </script>
