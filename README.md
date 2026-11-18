@@ -20,9 +20,20 @@ Each tab opens in its first preset; the pills under the tabs switch between them
 - **Gabor of Gabors** — Assemble (default), Nested, Twist, Shatter, Zoom, Swarm, Classic. Nested runs the multi-scale cascade described under Nesting. Assemble starts with the small Gabors pulled apart, draws them together into the one big Gabor, holds, and repeats.
 - **Portrait** — Assemble (default), Trip, Breathe, Engraved, Kaleidoscope, Pointillist, Shatter, Melt, In color, Faithful. All but Pointillist, In color and Faithful are grayscale. Assemble starts as a cloud of separate Gabor patches and draws them together into the face; Trip sweeps pull, point spread and spatial frequency at once with angle-driven colour; Breathe sweeps the point spread; Faithful fades the carriers out, so it is the plain scan in colour.
 
-## Your own scan
+## Make your own portrait
 
-In the Portrait tab, **+ Your scan** opens a Scaniverse `.spz` splat file and turns it into the same animated Gabor splats. The file is unpacked and converted in the browser; nothing is uploaded and no server or AI service is involved. Crop the scan to the subject in Scaniverse first. Up to 70,000 of the most opaque splats are kept, far-off background splats are dropped, and SPZ versions 2 and 3 are supported.
+In the Portrait tab, **+ Make your own** opens these steps and a file picker. The scan is unpacked and converted in the browser; nothing is uploaded and no server or AI service is involved.
+
+1. Get **Scaniverse** (free, iPhone and Android). It builds the scan on the phone.
+2. Tap **New Scan** and choose **Splat**, not Mesh.
+3. Have the person sit very still in soft, even light. Walk one slow, full circle around them at about arm's length, keeping head and shoulders in frame, then go around once more from a little higher.
+4. Let it process, then **Edit → Crop** and pull the box in until only head and shoulders are left. An uncropped room swamps the face.
+5. **Share → Export Model → SPZ**, and save it to Files.
+6. In Gabor Grove, **+ Make your own → Choose your scan file**, and pick that file.
+
+Once it loads, drag to orbit until you find the face. If it arrives upside down, tap **Flip** in the preset row. Every preset and control works on it.
+
+Two file formats are read: Scaniverse's `.spz` (versions 2 and 3) and the standard Gaussian-splat `.ply` (binary, with `f_dc_*`, `opacity`, `scale_*` and `rot_*` fields), which is what Polycam ("Splat PLY", on a paid plan) and KIRI Engine export. Only Scaniverse `.spz` files have been tried from a real app; the `.ply` reader was checked against a conversion of the same scan. Compressed `.ply` files and point clouds are rejected with a message. Up to 70,000 of the most opaque splats are kept and far-off background splats are dropped.
 
 ## Controls
 

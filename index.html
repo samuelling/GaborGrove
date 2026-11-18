@@ -44,6 +44,7 @@ body.gabor #dock{background:rgba(9,18,27,.9)}
 .presets{pointer-events:auto;display:flex;gap:6px;margin-top:8px;max-width:calc(100vw - 32px);overflow-x:auto;scrollbar-width:none;text-shadow:none;padding-bottom:2px}
 .presets::-webkit-scrollbar{display:none}
 .presets button{flex:none;font-size:12px;padding:4px 11px;min-height:30px;background:var(--panel);color:var(--cream);white-space:nowrap;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.presets button[data-tool]{border-style:dashed;border-color:var(--glow);color:var(--glow)}
 .presets button[aria-pressed="true"]{background:var(--glow);border-color:var(--glow);color:#06201b;font-weight:500}
 header p{margin:0;font-family:var(--mono);font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
 #dock{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);width:min(720px,calc(100% - 24px));background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
@@ -113,20 +114,27 @@ body.vr #gl{cursor:default}
 #vrEnter{background:var(--glow);border-color:var(--glow);color:#06201b;font-weight:500}
 #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:15px}
 #wtfBtn{position:fixed;top:7px;right:10px;pointer-events:auto;padding:3px 12px;min-height:28px;font-size:12px;font-weight:500;letter-spacing:.04em;background:var(--panel);color:var(--cream);text-shadow:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-#wtf{position:fixed;inset:0;z-index:5;background:rgba(5,9,14,.74);display:flex;justify-content:center;padding:14px;overflow-y:auto;overscroll-behavior:contain;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-#wtf .card{position:relative;width:min(560px,100%);margin:auto 0;background:#0c1721;border:1px solid var(--line);border-radius:16px;padding:20px 20px 22px}
-#wtf h2{font-family:var(--display);font-style:italic;font-weight:500;font-size:25px;line-height:1.1;margin:0 44px 2px 0}
-#wtf h3{font-size:12px;font-weight:500;color:var(--glow);margin:18px 0 4px;letter-spacing:.06em;text-transform:uppercase}
-#wtf p{margin:0 0 6px;font-size:14.5px;line-height:1.5}
-#wtf .lede{color:var(--dim)}
-#wtf .eq{display:flex;align-items:flex-start;justify-content:center;gap:8px;margin:12px 0 2px;font-family:var(--mono);color:var(--dim)}
-#wtf .eq figure{margin:0;text-align:center;font-size:11px}
-#wtf .eq canvas{display:block;width:78px;height:78px;border-radius:10px;border:1px solid var(--line);margin-bottom:4px}
-#wtf .eq b{font-weight:400;font-size:18px;line-height:78px}
-#wtf dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13.5px;line-height:1.4}
-#wtf dt{color:var(--dim);white-space:nowrap}
-#wtf dd{margin:0}
-#wtfClose{position:absolute;top:12px;right:12px;width:36px;padding:0;font-size:17px;line-height:1}
+.modal{position:fixed;inset:0;z-index:5;background:rgba(5,9,14,.74);display:flex;justify-content:center;padding:14px;overflow-y:auto;overscroll-behavior:contain;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.modal .card{position:relative;width:min(560px,100%);margin:auto 0;background:#0c1721;border:1px solid var(--line);border-radius:16px;padding:20px 20px 22px}
+.modal h2{font-family:var(--display);font-style:italic;font-weight:500;font-size:25px;line-height:1.1;margin:0 44px 2px 0}
+.modal h3{font-size:12px;font-weight:500;color:var(--glow);margin:18px 0 4px;letter-spacing:.06em;text-transform:uppercase}
+.modal p{margin:0 0 6px;font-size:14.5px;line-height:1.5}
+.modal .lede{color:var(--dim)}
+.modal .eq{display:flex;align-items:flex-start;justify-content:center;gap:8px;margin:12px 0 2px;font-family:var(--mono);color:var(--dim)}
+.modal .eq figure{margin:0;text-align:center;font-size:11px}
+.modal .eq canvas{display:block;width:78px;height:78px;border-radius:10px;border:1px solid var(--line);margin-bottom:4px}
+.modal .eq b{font-weight:400;font-size:18px;line-height:78px}
+.modal dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13.5px;line-height:1.4}
+.modal dt{color:var(--dim);white-space:nowrap}
+.modal dd{margin:0}
+.modalClose{position:absolute;top:12px;right:12px;width:36px;padding:0;font-size:17px;line-height:1}
+.modal ol{margin:10px 0 4px;padding:0;list-style:none;counter-reset:step;display:flex;flex-direction:column;gap:10px}
+.modal li{counter-increment:step;position:relative;padding-left:38px;font-size:14.5px;line-height:1.45}
+.modal li::before{content:counter(step);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:var(--glow);color:#06201b;font-family:var(--mono);font-weight:500;font-size:13px;display:flex;align-items:center;justify-content:center}
+.modal li strong,.modal p strong{font-weight:500;color:var(--glow)}
+.modal .go{display:block;width:100%;margin:16px 0 6px;padding:12px 16px;min-height:48px;background:var(--cap);border-color:var(--cap);color:#1a0b06;font-weight:500;font-size:15px}
+.modal .note{font-size:13px;color:var(--dim)}
+#howMsg{min-height:1.4em;font-family:var(--mono);font-size:12px;color:var(--glow)}
 @media (max-width:520px){
   h1{font-size:22px}
   input[type=range]{height:24px}
@@ -150,9 +158,9 @@ body.vr #gl{cursor:default}
   <div class="presets" id="presets" role="group" aria-label="Presets"></div>
   <button id="wtfBtn" type="button" aria-haspopup="dialog" aria-label="WTF? What this is, explained">WTF?</button>
 </header>
-<div id="wtf" role="dialog" aria-modal="true" aria-labelledby="wtfTitle" hidden>
+<div id="wtf" class="modal" role="dialog" aria-modal="true" aria-labelledby="wtfTitle" hidden>
   <div class="card">
-    <button id="wtfClose" type="button" aria-label="Close">×</button>
+    <button id="wtfClose" class="modalClose" type="button" aria-label="Close">×</button>
     <h2 id="wtfTitle">WTF am I looking at?</h2>
     <p class="lede">Scenes built from thousands of soft striped blobs. No triangles, no photos, no video.</p>
     <h3>1 · A splat</h3>
@@ -175,7 +183,7 @@ body.vr #gl{cursor:default}
     <dl>
       <dt>Mushroom grove</dt><dd>About 35,000 Gabor splats placed by rules written in code. Nothing was scanned.</dd>
       <dt>Gabor of Gabors</dt><dd>One big Gabor built from small ones. Their waves are lined up so that together they draw the big one's stripes. Nesting repeats the trick, Gabors inside Gabors.</dd>
-      <dt>Portrait</dt><dd>A phone scan of a real person, with a wave laid through every blob. Pull it apart to see the separate patches.</dd>
+      <dt>Portrait</dt><dd>A phone scan of a real person, with a wave laid through every blob. Pull it apart to see the separate patches. <strong>+ Make your own</strong> in that tab shows how to scan someone yourself.</dd>
     </dl>
     <h3>The controls</h3>
     <dl>
@@ -186,6 +194,28 @@ body.vr #gl{cursor:default}
       <dt>Sweeps</dt><dd>Move a control back and forth for you.</dd>
       <dt>3D and VR</dt><dd>Colored glasses or a phone headset, to stand inside it.</dd>
     </dl>
+  </div>
+</div>
+<div id="how" class="modal" role="dialog" aria-modal="true" aria-labelledby="howTitle" hidden>
+  <div class="card">
+    <button id="howClose" class="modalClose" type="button" aria-label="Close">×</button>
+    <h2 id="howTitle">Make your own</h2>
+    <p class="lede">Scan a person with your phone, then open the scan here. The file is read on this device. It is never uploaded.</p>
+    <ol>
+      <li>Get <strong>Scaniverse</strong>. It is free, for iPhone and Android, and builds the scan on the phone.</li>
+      <li>Tap <strong>New Scan</strong> and choose <strong>Splat</strong>, not Mesh.</li>
+      <li>Have your person sit very still in soft, even light. Walk one slow, full circle around them at about arm's length, keeping head and shoulders in frame. Then go around once more from a little higher.</li>
+      <li>Let it process. Then tap <strong>Edit</strong>, then <strong>Crop</strong>, and pull the box in until only head and shoulders are left. Do not skip this: an uncropped room swamps the face.</li>
+      <li>Tap <strong>Share</strong>, then <strong>Export Model</strong>, then <strong>SPZ</strong>. Save it to Files.</li>
+      <li>Tap the button below and pick that file.</li>
+    </ol>
+    <button id="howPick" class="go" type="button">Choose your scan file</button>
+    <p id="howMsg" role="status"></p>
+    <h3>Once it loads</h3>
+    <p>Drag to orbit until you find the face. If it comes in upside down, tap <strong>Flip</strong> in the row of presets. Every preset and slider works on it.</p>
+    <h3>Other apps</h3>
+    <p>Any app that exports a Gaussian splat as a <strong>.ply</strong> file should also work, such as Polycam (choose "Splat PLY"; splats need a paid plan there) or KIRI Engine. Only Scaniverse files have been tried here.</p>
+    <p class="note">Up to 70,000 of the most solid splats are kept, so a tight crop gives a sharper face.</p>
   </div>
 </div>
 <div id="err">This demo needs WebGL 2, which this browser did not provide.</div>
@@ -1052,54 +1082,117 @@ function loadPortrait(){
   });
   return portraitLoad;
 }
-/* A visitor's own Scaniverse scan (.spz), decoded entirely in the browser: nothing is uploaded anywhere.
-   SPZ is a gzip stream: a 16-byte header, then positions (24-bit fixed point), alphas, colours, log scales and rotations. */
+/* A visitor's own scan, decoded entirely in the browser: nothing is uploaded anywhere.
+   Two formats are read. SPZ (Scaniverse) is a gzip stream: a 16-byte header, then positions (24-bit fixed point), alphas,
+   colours, log scales and rotations. PLY is the layout the original 3D Gaussian splatting code writes: one record of
+   floats per splat, with log scales, logit opacity and a w-first quaternion.
+   Each reader returns {n, pos(i), alpha(i), color(i), scale(i), quat(i) as [x,y,z,w], flip}; buildScan does the rest. */
 const SCAN_MAX=70000;
+let scanSrc=null;
+function buildScan(src,flip){
+  const n=src.n,f=flip?-1:1;
+  // keep the most opaque splats if there are too many
+  const al=new Float32Array(n);let keep=[];
+  for(let i=0;i<n;i++){al[i]=src.alpha(i);if(al[i]>0.1)keep.push(i);}
+  if(keep.length>SCAN_MAX){keep.sort((a,b)=>al[b]-al[a]);keep.length=SCAN_MAX;}
+  if(keep.length<50)throw new Error('The scan has too few visible splats.');
+  // centre on the median, scale so nearly everything fits the usual view
+  const med=k=>{const v=keep.map(i=>src.pos(i)[k]).sort((a,b)=>a-b);return v[v.length>>1];},ctr=[med(0),med(1),med(2)];
+  const far=keep.map(i=>{const q=src.pos(i);return Math.max(Math.abs(q[0]-ctr[0]),Math.abs(q[1]-ctr[1]),Math.abs(q[2]-ctr[2]));}),dev=far.slice().sort((a,b)=>a-b);
+  const ext=dev[Math.floor(dev.length*0.9)]||1,Ks=2.2/ext;
+  if(!(ext>0)||!isFinite(ext))throw new Error('The scan could not be read.');
+  keep=keep.filter((i,j)=>far[j]<=ext*1.6);   // drop stray far-off splats, such as a scan's sky shell
+  // flip turns the scan half a turn about the left-right axis (y-down files, or a scan that arrives upside down)
+  const tf=v=>[v[0],v[1]*f,v[2]*f];
+  ingestScan(keep.length,j=>{
+    const i=keep[j],q=src.pos(i),sc=src.scale(i).map(v=>v*Ks),Q=src.quat(i),x=Q[0],y=Q[1],z=Q[2],w=Q[3];
+    const R=[[1-2*(y*y+z*z),2*(x*y+z*w),2*(x*z-y*w)],[2*(x*y-z*w),1-2*(x*x+z*z),2*(y*z+x*w)],[2*(x*z+y*w),2*(y*z-x*w),1-2*(x*x+y*y)]];   // R[k] = local axis k
+    const ord=[0,1,2].sort((a,b)=>sc[b]-sc[a]);
+    return{p:tf([(q[0]-ctr[0])*Ks,(q[1]-ctr[1])*Ks,(q[2]-ctr[2])*Ks]),long:tf(R[ord[0]]),short:tf(R[ord[2]]),s:[sc[ord[0]],sc[ord[1]],sc[ord[2]]],c:src.color(i),a:al[i]};
+  });
+}
 async function readSpz(file){
   if(!window.DecompressionStream)throw new Error('This browser cannot unpack .spz files.');
   let raw;
   try{raw=new Uint8Array(await new Response(file.stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());}
-  catch(err){throw new Error('That is not a Scaniverse .spz splat file.');}
+  catch(err){throw new Error('That file is not a splat scan. Export SPZ from Scaniverse.');}
   const dv=new DataView(raw.buffer);
-  if(raw.length<16||dv.getUint32(0,true)!==0x5053474e)throw new Error('That is not a Scaniverse .spz splat file.');
+  if(raw.length<16||dv.getUint32(0,true)!==0x5053474e)throw new Error('That file is not a splat scan. Export SPZ from Scaniverse.');
   const ver=dv.getUint32(4,true),n=dv.getUint32(8,true),shDim=[0,3,8,15][raw[12]]||0,fb=raw[13],rb=ver>=3?4:3;
-  if(ver<2||ver>3)throw new Error('This .spz is version '+ver+'; only versions 2 and 3 are supported.');
+  if(ver<2||ver>3)throw new Error('This .spz is version '+ver+'; only versions 2 and 3 are supported. Try exporting PLY instead.');
   if(raw.length<16+n*(16+rb+shDim*3))throw new Error('The .spz file is incomplete.');
   const oP=16,oA=oP+n*9,oC=oA+n,oS=oC+n*3,oR=oS+n*3,fx=1/(1<<fb);
-  const pos=i=>{const o=oP+i*9,r=[0,0,0];for(let k=0;k<3;k++){let v=raw[o+k*3]|(raw[o+k*3+1]<<8)|(raw[o+k*3+2]<<16);if(v&0x800000)v-=0x1000000;r[k]=v*fx;}return r;};
-  // keep the most opaque splats if there are too many
-  let keep=[];for(let i=0;i<n;i++)if(raw[oA+i]>25)keep.push(i);
-  if(keep.length>SCAN_MAX){keep.sort((a,b)=>raw[oA+b]-raw[oA+a]);keep.length=SCAN_MAX;}
-  if(keep.length<50)throw new Error('The scan has too few visible splats.');
-  // centre on the median, scale so nearly everything fits the usual view
-  const med=k=>{const v=keep.map(i=>pos(i)[k]).sort((a,b)=>a-b);return v[v.length>>1];},ctr=[med(0),med(1),med(2)];
-  const far=keep.map(i=>{const q=pos(i);return Math.max(Math.abs(q[0]-ctr[0]),Math.abs(q[1]-ctr[1]),Math.abs(q[2]-ctr[2]));}),dev=far.slice().sort((a,b)=>a-b);
-  const ext=dev[Math.floor(dev.length*0.9)]||1,Ks=2.2/ext;
-  keep=keep.filter((i,j)=>far[j]<=ext*1.6);   // drop stray far-off splats, such as a scan's sky shell
-  ingestScan(keep.length,j=>{
-    const i=keep[j],q=pos(i),sc=[0,1,2].map(k=>Math.exp(raw[oS+i*3+k]/16-10)*Ks);
-    let x,y,z,w;
-    if(rb===3){x=raw[oR+i*3]/127.5-1;y=raw[oR+i*3+1]/127.5-1;z=raw[oR+i*3+2]/127.5-1;w=Math.sqrt(Math.max(0,1-x*x-y*y-z*z));}
-    else{let u=dv.getUint32(oR+i*4,true);const big=u>>>30,qq=[0,0,0,0];let ss=0;
+  return{n:n,flip:false,
+    pos:i=>{const o=oP+i*9,r=[0,0,0];for(let k=0;k<3;k++){let v=raw[o+k*3]|(raw[o+k*3+1]<<8)|(raw[o+k*3+2]<<16);if(v&0x800000)v-=0x1000000;r[k]=v*fx;}return r;},
+    alpha:i=>raw[oA+i]/255,
+    color:i=>[0,1,2].map(k=>clamp(0.5+0.2820948*((raw[oC+i*3+k]/255-0.5)/0.15),0,1)),
+    scale:i=>[0,1,2].map(k=>Math.exp(raw[oS+i*3+k]/16-10)),
+    quat:i=>{
+      if(rb===3){const x=raw[oR+i*3]/127.5-1,y=raw[oR+i*3+1]/127.5-1,z=raw[oR+i*3+2]/127.5-1;return[x,y,z,Math.sqrt(Math.max(0,1-x*x-y*y-z*z))];}
+      let u=dv.getUint32(oR+i*4,true);const big=u>>>30,qq=[0,0,0,0];let ss=0;
       for(let k=3;k>=0;k--){if(k===big)continue;const m=(u&511)/511*Math.SQRT1_2,v=((u>>>9)&1)?-m:m;qq[k]=v;ss+=v*v;u>>>=10;}
-      qq[big]=Math.sqrt(Math.max(0,1-ss));x=qq[0];y=qq[1];z=qq[2];w=qq[3];}
-    const R=[[1-2*(y*y+z*z),2*(x*y+z*w),2*(x*z-y*w)],[2*(x*y-z*w),1-2*(x*x+z*z),2*(y*z+x*w)],[2*(x*z+y*w),2*(y*z-x*w),1-2*(x*x+y*y)]];   // R[k] = local axis k
-    const ord=[0,1,2].sort((a,b)=>sc[b]-sc[a]);
-    return{p:[(q[0]-ctr[0])*Ks,(q[1]-ctr[1])*Ks,(q[2]-ctr[2])*Ks],long:R[ord[0]],short:R[ord[2]],s:[sc[ord[0]],sc[ord[1]],sc[ord[2]]],
-      c:[0,1,2].map(k=>clamp(0.5+0.2820948*((raw[oC+i*3+k]/255-0.5)/0.15),0,1)),a:raw[oA+i]/255};
-  });
+      qq[big]=Math.sqrt(Math.max(0,1-ss));return qq;}};
 }
-const scanInput=document.createElement('input');scanInput.type='file';scanInput.accept='.spz';scanInput.hidden=true;document.body.appendChild(scanInput);
+async function readPly(file){
+  if(file.size>600e6)throw new Error('That .ply is too large to open here. Crop the scan first.');
+  const buf=await file.arrayBuffer(),u8=new Uint8Array(buf);
+  // the header is text, ending with end_header and a newline
+  let end=-1;const lim=Math.min(u8.length,20000),mark=[101,110,100,95,104,101,97,100,101,114];
+  for(let i=0;i<lim-mark.length;i++){let ok=true;for(let k=0;k<mark.length;k++)if(u8[i+k]!==mark[k]){ok=false;break;}if(ok){end=i+mark.length;break;}}
+  if(end<0)throw new Error('That .ply file has no readable header.');
+  while(end<u8.length&&u8[end]!==10)end++;end++;
+  const head=new TextDecoder().decode(u8.subarray(0,end)).split(/\r?\n/);
+  if(!head.some(l=>l.trim()==='format binary_little_endian 1.0'))throw new Error('Only binary .ply splat files can be read.');
+  const SZ={char:1,uchar:1,int8:1,uint8:1,short:2,ushort:2,int16:2,uint16:2,int:4,uint:4,int32:4,uint32:4,float:4,float32:4,double:8,float64:8};
+  let n=0,inV=false,stride=0,skip=0,seenV=false;const off={};
+  for(const l of head){const t=l.trim().split(/\s+/);
+    if(t[0]==='element'){inV=t[1]==='vertex';if(inV){n=+t[2];seenV=true;}else if(!seenV)throw new Error('This .ply is a compressed splat. Export a plain Splat PLY instead.');}
+    else if(t[0]==='property'&&inV){if(t[1]==='list'||!SZ[t[1]])throw new Error('That .ply file is not a Gaussian splat.');if(t[1]==='float'||t[1]==='float32')off[t[2]]=stride;stride+=SZ[t[1]];}}
+  const need=['x','y','z','f_dc_0','f_dc_1','f_dc_2','opacity','scale_0','scale_1','scale_2','rot_0','rot_1','rot_2','rot_3'];
+  if(!n||need.some(k=>off[k]===undefined))throw new Error('That .ply is a point cloud or mesh, not a Gaussian splat. In Polycam choose "Splat PLY".');
+  if(u8.length<end+n*stride)throw new Error('The .ply file is incomplete.');
+  const dv=new DataView(buf,end),g=(i,k)=>dv.getFloat32(i*stride+off[k],true);
+  return{n:n,flip:true,   // these files are written y-down
+    pos:i=>[g(i,'x'),g(i,'y'),g(i,'z')],
+    alpha:i=>1/(1+Math.exp(-g(i,'opacity'))),
+    color:i=>[clamp(0.5+0.2820948*g(i,'f_dc_0'),0,1),clamp(0.5+0.2820948*g(i,'f_dc_1'),0,1),clamp(0.5+0.2820948*g(i,'f_dc_2'),0,1)],
+    scale:i=>[Math.exp(g(i,'scale_0')),Math.exp(g(i,'scale_1')),Math.exp(g(i,'scale_2'))],
+    quat:i=>{const w=g(i,'rot_0'),x=g(i,'rot_1'),y=g(i,'rot_2'),z=g(i,'rot_3'),m=Math.hypot(w,x,y,z)||1;return[x/m,y/m,z/m,w/m];}};
+}
+async function readScan(file){
+  const h=new Uint8Array(await file.slice(0,4).arrayBuffer());
+  if(h[0]===0x1f&&h[1]===0x8b)return readSpz(file);
+  if(h[0]===112&&h[1]===108&&h[2]===121)return readPly(file);
+  throw new Error('That file is not a splat scan. Export SPZ from Scaniverse.');
+}
+// no accept filter on the picker: phones grey out file types they do not know, and .spz is one of them
+const scanInput=document.createElement('input');scanInput.type='file';scanInput.hidden=true;document.body.appendChild(scanInput);
+function showScan(){portraitLoad=Promise.resolve();portraitOwn=true;setScene('portrait',true);}
 scanInput.addEventListener('change',()=>{
   const f=scanInput.files&&scanInput.files[0];if(!f)return;
-  $('count').textContent='Reading your scan…';
-  readSpz(f).then(()=>{portraitLoad=Promise.resolve();portraitOwn=true;cams.portrait.yaw=0;cams.portrait.pitch=0.04;cams.portrait.dist=8.2;cams.portrait.target=[0,0,0];setScene('portrait',true);})
-    .catch(err=>{$('count').textContent=err&&err.message?err.message:'That scan could not be read.';});
+  const say=t=>{$('howMsg').textContent=t;$('count').textContent=t;};
+  say('Reading your scan…');
+  // let the message paint before the heavy work starts
+  new Promise(r=>setTimeout(r,60)).then(()=>readScan(f)).then(src=>{buildScan(src,src.flip);scanSrc=src;scanSrc.flipped=src.flip;
+      cams.portrait.yaw=0;cams.portrait.pitch=0.04;cams.portrait.dist=8.2;cams.portrait.target=[0,0,0];$('howMsg').textContent='';howSet(false);showScan();})
+    .catch(err=>{say(err&&err.message?err.message:'That scan could not be read.');});
   scanInput.value='';
 });
+function flipScan(){if(!scanSrc)return;scanSrc.flipped=!scanSrc.flipped;try{buildScan(scanSrc,scanSrc.flipped);}catch(err){return;}const keep=presetBy.portrait;showScan();if(keep!==presetBy.portrait)applyPreset(keep);}
+/* the how-to sheet for making your own scan */
+let howFrom=null;
+function howSet(open){
+  if(open===!$('how').hidden)return;
+  if(open){howFrom=document.activeElement;$('howMsg').textContent='';$('how').hidden=false;$('how').scrollTop=0;$('howClose').focus();}
+  else{$('how').hidden=true;if(howFrom&&howFrom.isConnected&&howFrom.focus)howFrom.focus();}
+}
+$('howClose').addEventListener('click',()=>howSet(false));
+$('how').addEventListener('click',e=>{if(e.target===$('how'))howSet(false);});
+$('howPick').addEventListener('click',()=>scanInput.click());
+window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('how').hidden)howSet(false);});
 function caption(){
   const nn=SC[S.scene].N.toLocaleString('en-US');
-  $('count').textContent=S.scene==='portrait'?nn+(portraitOwn?' Gabor splats from your scan · it stays on this device':' Gabor splats from a phone scan · drag to orbit'):S.scene!=='gabor'?nn+' Gabor splats · drag to orbit, pinch to zoom':
+  $('count').textContent=S.scene==='portrait'?nn+(portraitOwn?' Gabor splats from your scan · never uploaded':' Gabor splats from a phone scan · drag to orbit'):S.scene!=='gabor'?nn+' Gabor splats · drag to orbit, pinch to zoom':
     S.nest>1?'Gabors made of Gabors, '+S.nest+' scales deep · '+Math.pow(8,S.nest-1).toLocaleString('en-US')+' at the bottom':'1 big Gabor made of '+nn+' small Gabors · drag to orbit';
 }
 $('nest').addEventListener('input',e=>{S.nest=+e.target.value;$('nestOut').textContent=S.nest===1?'classic':S.nest+' scales';caption();});
@@ -1320,11 +1413,16 @@ const PRESETS={
     {name:'In color',speed:2,world:1,con:85,sat:100},
     {name:'Faithful',speed:0,world:1,con:0,sat:100}]
 };
-function markPreset(i){const b=$('presets').children;for(let k=0;k<PRESETS[S.scene].length&&k<b.length;k++)b[k].setAttribute('aria-pressed',String(k===i));}
+function markPreset(i){const b=[...$('presets').children].filter(x=>!x.dataset.tool);for(let k=0;k<PRESETS[S.scene].length&&k<b.length;k++)b[k].setAttribute('aria-pressed',String(k===i));}
 function renderPresets(){
   const box=$('presets');box.textContent='';
   PRESETS[S.scene].forEach((p,i)=>{const b=document.createElement('button');b.type='button';b.textContent=p.name;b.addEventListener('click',()=>applyPreset(i));box.appendChild(b);});
-  if(S.scene==='portrait'){const b=document.createElement('button');b.type='button';b.textContent='+ Your scan';b.title='Open a Scaniverse .spz file. It is read on this device and not uploaded.';b.addEventListener('click',()=>scanInput.click());box.appendChild(b);}
+  if(S.scene==='portrait'){
+    const mk=(t,tip,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=t;b.title=tip;b.dataset.tool='1';b.addEventListener('click',fn);return b;};
+    // first in the row, so it is on screen without scrolling
+    box.insertBefore(mk('+ Make your own','How to scan a person and open the scan here. Nothing is uploaded.',()=>howSet(true)),box.firstChild);
+    if(portraitOwn)box.insertBefore(mk('Flip','Turn the scan the other way up',flipScan),box.children[1]);
+  }
 }
 function applyPreset(i){
   const p=PRESETS[S.scene][i];if(!p)return;presetBy[S.scene]=i;
