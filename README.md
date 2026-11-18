@@ -26,7 +26,7 @@ In the Portrait tab, **+ Your scan** opens a Scaniverse `.spz` splat file and tu
 
 ## Controls
 
-The controls sit in a shelf that slides up from the bottom edge. Closed, it is fully off screen and only its **Controls** tab shows; tap or drag the tab to open it, and use the tab or ✕ to close it. **WTF?** (top right) opens a plain-words explainer of splats, Gabors and what each tab is made of.
+The controls sit in a shelf that slides in from the right edge, below the header. Closed, it is fully off screen and only its **Controls** tab shows; tap or drag the tab to open it, and use the tab or ✕ to close it. On wide screens it is a side panel and the scene moves over; on a phone it covers most of the width, so while a slider is held everything but that slider steps aside to show the scene. **WTF?** (top right) opens a plain-words explainer of splats, Gabors and what each tab is made of.
 
 - **Carrier angle / Speed** — rotates every carrier's orientation over time.
 - **Rotate: Together / As a wave** — one angle scene-wide, or an angle that lags with position.
