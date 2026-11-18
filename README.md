@@ -37,6 +37,32 @@ Each tab opens in its first preset; the pills under the tabs switch between them
 - **Carriers on** — switch off to see the same splats as plain Gaussians.
 - **Rotate envelopes too** — rotates the Gaussian envelopes along with the carriers.
 
+## CV port
+
+Other pages, or MIDI gear, can play Gabor Grove's sliders and read its motion back. `cv-test.html` is a small stand-in for a mod matrix that does both, and is the reference for the messages below.
+
+**From another page** (any origin). Open or frame Gabor Grove, then post messages to that window:
+
+```js
+const gg = window.open('https://samuelling.github.io/GaborGrove/?cv', 'gabor-grove');   // or iframe.contentWindow, with ?embed to hide the interface
+
+gg.postMessage({ type: 'gg:set', param: 'spatialFreq', value: 0.73 }, '*');   // 0..1, absolute slider position
+gg.postMessage({ type: 'gg:mod', param: 'contrast',    value: lfo  }, '*');   // -1..1, added to where the slider sits
+
+addEventListener('message', e => {
+  if (e.data?.type === 'gg:ready')  gg.postMessage({ type: 'gg:describe' }, '*');
+  if (e.data?.type === 'gg:params') console.log(e.data.inputs, e.data.outputs);  // what can be played, what can be read
+  if (e.data?.type === 'gg:state')  console.log(e.data.values);                  // about 30 times a second, each 0..1
+});
+```
+
+- **Inputs:** `speed`, `pointSpread`, `spatialFreq`, `sfSweep`, `colorByAngle`, `contrast`, `contrastSweep`, `pullApart`, `pullSweep`, `nesting`, `depth3d`, `lens`, `angle` (the carrier angle itself, one turn per 0..1), `scene` (below 0.5 grove, above Gabor of Gabors).
+- **Outputs:** `angle`, `angleSin`, `spatialFreq`, `contrast`, `pullApart`.
+- A slider moved by hand, or set with `gg:set`, becomes the centre that `gg:mod` swings around.
+- Pages on the same origin can use `new BroadcastChannel('gabor-grove')` with the same messages.
+
+**MIDI.** "Connect MIDI" in the drawer listens on every MIDI input for CC 20 upward (one per input, in the order above) and sends the outputs as CC 40 upward. This needs a browser with Web MIDI.
+
 ## How the projection works
 
 Each splat's covariance is expressed in a frame whose third axis is the viewing ray. Integrating `G(x) cos(k·x + φ)` along the ray gives a 2D Gaussian times a 2D carrier:

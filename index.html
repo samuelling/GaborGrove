@@ -81,6 +81,11 @@ legend{float:left;padding:0;margin-right:8px;font-size:11px;color:var(--dim)}
 #dockBody{display:flex;flex-direction:column;gap:10px;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (max-width:520px){#dock{padding:0 12px 10px;gap:6px}#dockBody{gap:6px}}
 @media (prefers-reduced-motion:reduce){#dock{transition:none}}
+.led{width:9px;height:9px;border-radius:50%;background:var(--line);flex:none}
+.led.on{background:var(--glow);box-shadow:0 0 8px var(--glow)}
+#cvStat{font-family:var(--mono);font-size:12px;color:var(--dim)}
+#midiBtn{padding:5px 12px;min-height:30px;font-size:12px}
+body.embed header,body.embed #dock{display:none}
 #vrui{display:none}
 body.vr header,body.vr #dock{display:none}
 body.vr #vrui{display:block}
@@ -222,6 +227,13 @@ body.vr #gl{cursor:default}
       <output id="lensOut" for="lens">50%</output>
     </div>
     <label class="check"><input type="checkbox" id="drift">Drift forward in VR</label>
+  </div>
+  <div class="row more">
+    <fieldset>
+      <legend>CV port</legend>
+      <span class="led" id="cvLed"></span><output id="cvStat">idle</output>
+    </fieldset>
+    <button id="midiBtn" type="button">Connect MIDI</button>
   </div>
   <div class="row more">
     <label class="check"><input type="checkbox" id="carriers" checked>Carriers on</label>
@@ -964,6 +976,7 @@ function frame(now){
   S.wave+=(S.waveT-S.wave)*Math.min(1,dt*3);S.carrier+=(S.carrierT-S.carrier)*Math.min(1,dt*4);
   dockSm+=(dockShift-dockSm)*Math.min(1,dt*9);
   S.idle+=dt;if(S.auto&&S.idle>2.5&&ptrs.size===0)cam.yaw+=S.scene==='gabor'?0.07*Math.sin((S.idle-2.5)*0.3)*dt:0.045*dt;
+  cvTick(now);
   if(VR.on)drawVR(now/1000,dt);else draw(now/1000);
   const deg=((S.theta*180/Math.PI)%360+360)%360;
   thetaOut.textContent=deg.toFixed(0)+'°';dial.style.transform='rotate('+deg.toFixed(1)+'deg)';
@@ -1105,7 +1118,79 @@ function applyPreset(i){
 for(const ev of['input','change'])dock.addEventListener(ev,e=>{if(e.isTrusted)markPreset(-1);});
 presetsReady=true;renderPresets();applyPreset(presetBy[S.scene]);
 drawer.set(window.innerWidth>700);
-window.GROVE={drawer:drawer,applyPreset:applyPreset,VR:VR,quatDevice:quatDevice,qrot:qrot,HDR:HDR,S:S,cams:cams,get cam(){return cam;},get count(){return SC[S.scene].N;},setScene:setScene};
+/* ---------- CV port: other pages (or MIDI gear) can play the sliders, and read this page's own motion ----------
+   In:  postMessage / BroadcastChannel('gabor-grove') objects
+          {type:'gg:set', param, value}   value 0..1, absolute position of that slider
+          {type:'gg:mod', param, value}   value -1..1, added to wherever the slider was last set by hand or by gg:set
+          {type:'gg:describe'}            asks for the parameter list
+        MIDI CC 20.. (one per parameter, in the order of CV_IN), 0..127
+   Out: {type:'gg:params', inputs:[{name,label,value}], outputs:[names]}   after gg:describe
+        {type:'gg:state', values:{name:0..1}}                              about 30 times a second, to pages that have written to us
+        MIDI CC 40.. (one per output), when MIDI is connected */
+const CV_IN=[['speed','speed','Rotation speed'],['pointSpread','psf','Point spread'],['spatialFreq','sf','Spatial frequency'],['sfSweep','sweep','SF sweep'],
+  ['colorByAngle','col','Color by angle'],['contrast','con','Contrast'],['contrastSweep','csweep','Contrast sweep'],['pullApart','pull','Pull apart'],
+  ['pullSweep','psweep','Pull sweep'],['nesting','nest','Nesting'],['depth3d','depth','3D depth'],['lens','lens','Lens correction'],['angle',null,'Carrier angle'],['scene',null,'Tab']];
+const CV_OUT=['angle','angleSin','spatialFreq','contrast','pullApart'];
+const CV={base:{},mod:{},dirty:new Set(),peers:new Set(),bc:null,midi:null,lastIn:0,lastOut:0,count:0,sent:{}};
+const cvEl=name=>{const r=CV_IN.find(x=>x[0]===name);return r&&r[1]?$(r[1]):null;};
+const cvNorm=el=>(+el.value-+el.min)/(+el.max-+el.min);
+function cvTouch(name){CV.dirty.add(name);CV.lastIn=performance.now();CV.count++;}
+function cvSet(name,v){if(!CV_IN.some(x=>x[0]===name)||!isFinite(v))return;CV.base[name]=clamp(v,0,1);cvTouch(name);}
+function cvMod(name,v){if(!CV_IN.some(x=>x[0]===name)||!isFinite(v))return;CV.mod[name]=clamp(v,-1,1);cvTouch(name);}
+function cvSend(msg){
+  for(const w of CV.peers){try{w.postMessage(msg,'*');}catch(err){CV.peers.delete(w);}}
+  if(CV.bc){try{CV.bc.postMessage(msg);}catch(err){}}
+}
+function cvDescribe(){cvSend({type:'gg:params',inputs:CV_IN.map(r=>{const el=r[1]?$(r[1]):null;return{name:r[0],label:r[2],value:el?cvNorm(el):0};}),outputs:CV_OUT});}
+function cvMsg(d,src){
+  if(!d||typeof d!=='object'||typeof d.type!=='string'||d.type.slice(0,3)!=='gg:')return;
+  if(src&&src!==window)CV.peers.add(src);
+  if(d.type==='gg:set')cvSet(String(d.param),+d.value);
+  else if(d.type==='gg:mod')cvMod(String(d.param),+d.value);
+  else if(d.type==='gg:describe')cvDescribe();
+}
+window.addEventListener('message',e=>cvMsg(e.data,e.source));
+try{CV.bc=new BroadcastChannel('gabor-grove');CV.bc.onmessage=e=>cvMsg(e.data,null);}catch(err){}
+// a slider moved by hand becomes the new centre that gg:mod swings around
+dock.addEventListener('input',e=>{if(!e.isTrusted)return;const r=CV_IN.find(x=>x[1]===e.target.id);if(r)CV.base[r[0]]=cvNorm(e.target);});
+function cvTick(now){
+  for(const name of CV.dirty){
+    const el=cvEl(name),b=CV.base[name],m=CV.mod[name]||0;
+    if(name==='angle'){S.theta=((b===undefined?0:b)+m)*TAU;continue;}
+    if(name==='scene'){const want=(b||0)+m>0.5?'gabor':'grove';if(want!==S.scene)setScene(want,true);continue;}
+    if(!el)continue;
+    const n=clamp((b===undefined?(CV.base[name]=cvNorm(el)):b)+m,0,1),v=+el.min+n*(+el.max-+el.min);
+    if(Math.abs(v-+el.value)>1e-6){el.value=v;el.dispatchEvent(new Event('input'));}
+  }
+  CV.dirty.clear();
+  const live=now-CV.lastIn<600;
+  $('cvLed').classList.toggle('on',live);$('cvStat').textContent=live?'receiving':(CV.count?'idle · '+CV.count+' in':'idle');
+  if(now-CV.lastOut<33||(CV.peers.size===0&&!CV.bc&&!CV.midi))return;
+  CV.lastOut=now;
+  const values={angle:((S.theta/TAU)%1+1)%1,angleSin:0.5+0.5*Math.sin(S.theta),spatialFreq:clamp(Math.log(S.sfEff)/Math.log(4)*0.5+0.5,0,1),
+    contrast:clamp(Math.log10(Math.max(S.conEff,1e-4))/2+1,0,1),pullApart:clamp(S.spreadEff,0,1)};
+  cvSend({type:'gg:state',values:values});
+  if(CV.midi)CV_OUT.forEach((k,i)=>{const b=Math.round(values[k]*127);if(CV.sent[k]!==b){CV.sent[k]=b;for(const o of CV.midi.outputs.values())o.send([0xB0,40+i,b]);}});
+}
+$('midiBtn').addEventListener('click',()=>{
+  if(!navigator.requestMIDIAccess){$('midiBtn').textContent='No MIDI in this browser';return;}
+  navigator.requestMIDIAccess().then(a=>{
+    CV.midi=a;
+    const hook=()=>{for(const i of a.inputs.values())i.onmidimessage=e=>{const d=e.data;if((d[0]&0xF0)===0xB0&&d[1]>=20&&d[1]<20+CV_IN.length)cvSet(CV_IN[d[1]-20][0],d[2]/127);};};
+    hook();a.onstatechange=hook;$('midiBtn').textContent='MIDI on ('+a.inputs.size+' in, '+a.outputs.size+' out)';
+  }).catch(()=>{$('midiBtn').textContent='MIDI refused';});
+});
+// ?embed hides the interface for use inside another page; ?cv or ?embed says hello to whoever opened or framed us
+(function(){
+  const q=location.search;
+  if(/[?&]embed\b/.test(q))document.body.classList.add('embed');
+  if(/[?&](embed|cv)\b/.test(q)){
+    if(window.opener)CV.peers.add(window.opener);
+    if(window.parent!==window)CV.peers.add(window.parent);
+    cvSend({type:'gg:ready'});cvDescribe();
+  }
+})();
+window.GROVE={CV:CV,drawer:drawer,applyPreset:applyPreset,VR:VR,quatDevice:quatDevice,qrot:qrot,HDR:HDR,S:S,cams:cams,get cam(){return cam;},get count(){return SC[S.scene].N;},setScene:setScene};
 requestAnimationFrame(frame);
 })();
 </script>
