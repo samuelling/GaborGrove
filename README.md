@@ -68,6 +68,10 @@ The controls sit in a shelf that slides up from the bottom edge and stops below 
 - **Carriers on** — switch off to see the same splats as plain Gaussians.
 - **Rotate envelopes too** — rotates the Gaussian envelopes along with the carriers.
 
+## Invisible Hands
+
+**Link** (in the controls shelf) joins a room on the [Invisible Hands](https://github.com/samuelling/InvisibleHands) relay, so that someone elsewhere can move Gabor Grove's controls and read its outputs. Every control in the CV port list below is offered, under the same names, along with the five outputs. A page opened with `?room=<code>` joins by itself. Remote control can be switched off in the Link dialog. `invisible-hands.js` is a copy of the file from that repo; if it fails to load, Gabor Grove runs without it.
+
 ## CV port
 
 Other pages, or MIDI gear, can play Gabor Grove's sliders and read its motion back. `cv-test.html` is a small stand-in for a mod matrix that does both, and is the reference for the messages below.
@@ -87,7 +91,7 @@ addEventListener('message', e => {
 });
 ```
 
-- **Inputs:** `speed`, `pointSpread`, `spatialFreq`, `sfSweep`, `colorByAngle`, `contrast`, `contrastSweep`, `pullApart`, `pullSweep`, `nesting`, `depth3d`, `lens`, `angle` (the carrier angle itself, one turn per 0..1), `scene` (below 0.5 grove, above Gabor of Gabors), `spreadSweep`, `scanColor`, `sizeVariance`, `sfVariance`, `varianceSweep`, `redrawRate`.
+- **Inputs:** `speed`, `pointSpread`, `spatialFreq`, `sfSweep`, `colorByAngle`, `contrast`, `contrastSweep`, `pullApart`, `pullSweep`, `nesting`, `depth3d`, `lens`, `angle` (the carrier angle itself, one turn per 0..1), `scene` (the tab, in thirds: Portrait, Gabor of Gabors, Mushroom grove), `spreadSweep`, `scanColor`, `sizeVariance`, `sfVariance`, `varianceSweep`, `redrawRate`.
 - **Outputs:** `angle`, `angleSin`, `spatialFreq`, `contrast`, `pullApart`.
 - A slider moved by hand, or set with `gg:set`, becomes the centre that `gg:mod` swings around.
 - Pages on the same origin can use `new BroadcastChannel('gabor-grove')` with the same messages.
