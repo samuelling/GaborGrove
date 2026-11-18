@@ -31,7 +31,7 @@ In the Portrait tab, **+ Make your own** opens these steps and a file picker. Th
 5. **Share → Export Model → SPZ**, and save it to Files.
 6. In Gabor Grove, **+ Make your own → Choose your scan file**, and pick that file.
 
-The dialog reports each stage (reading, unpacking, building) and shows any failure in a red box under the button. The file is copied into memory before the picker is cleared, and gzip is unpacked by code in the page, so loading does not depend on the browser's stream decompressor.
+The dialog shows a progress bar and names each stage (reading, unpacking, building), and shows any failure in a red box under the button. The build runs in slices so the bar can move, and the scan already on screen stays until the new one is ready. The file is copied into memory before the picker is cleared, and gzip is unpacked by code in the page, so loading does not depend on the browser's stream decompressor.
 
 Once it loads, drag to orbit until you find the face. If it arrives upside down, tap **Flip** in the preset row. Every preset and control works on it.
 

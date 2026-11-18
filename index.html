@@ -139,6 +139,8 @@ body.vr #gl{cursor:default}
 .vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
 .vh:focus-visible + .go{outline:2px solid var(--glow);outline-offset:2px}
 .modal .note{font-size:13px;color:var(--dim)}
+.bar{height:8px;border-radius:4px;background:rgba(241,227,196,.14);overflow:hidden;margin:2px 0 8px}
+.bar i{display:block;height:100%;width:0;border-radius:4px;background:var(--glow);transition:width .12s linear}
 #howMsg{min-height:1.4em;margin:0 0 4px;font-family:var(--mono);font-size:12.5px;line-height:1.45;color:var(--glow)}
 #howMsg.bad{color:#ffd9cf;background:rgba(228,88,60,.22);border:1px solid var(--cap);border-radius:10px;padding:9px 12px}
 @media (max-width:520px){
@@ -218,6 +220,7 @@ body.vr #gl{cursor:default}
     </ol>
     <input id="scanFile" class="vh" type="file">
     <label id="howPick" class="go" for="scanFile">Choose your scan file</label>
+    <div id="howBar" class="bar" role="progressbar" aria-label="Loading your scan" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><i></i></div>
     <p id="howMsg" role="status"></p>
     <h3>Once it loads</h3>
     <p>Drag to orbit until you find the face. If it comes in upside down, tap <strong>Flip</strong> in the row of presets. Every preset and slider works on it.</p>
@@ -1103,14 +1106,12 @@ $('col').addEventListener('input',e=>{S.col=+e.target.value/100;$('colOut').text
    so the stripes run through the head as parallel sheets and show on the skin like engraving lines. */
 let portraitLoad=null,portraitOwn=false;
 // build the portrait scene from n Gaussians; get(i) returns {p, long, short, s:[long,mid,short], c, a} in page units
-function ingestScan(n,get){
-  const K=[0,TAU/0.09,0],d=0.3;
-  if(SC.portrait)gl.deleteTexture(SC.portrait.tex);
-  N=0;
-  for(let i=0;i<n;i++){const g=get(i),c=g.c;
-    splat(g.p,g.long,g.short,g.s[0],g.s[1],g.s[2],[Math.min(1,c[0]*(1+d)),Math.min(1,c[1]*(1+d)),Math.min(1,c[2]*(1+d))],mul(c,1-d),g.a,K,0,1,0,0,1);}
-  SC.portrait=finalizeScene();
+function ingestOne(g){
+  const d=0.3,c=g.c;
+  splat(g.p,g.long,g.short,g.s[0],g.s[1],g.s[2],[Math.min(1,c[0]*(1+d)),Math.min(1,c[1]*(1+d)),Math.min(1,c[2]*(1+d))],mul(c,1-d),g.a,[0,TAU/0.09,0],0,1,0,0,1);
 }
+function ingestEnd(){const old=SC.portrait;SC.portrait=finalizeScene();if(old)gl.deleteTexture(old.tex);}
+function ingestScan(n,get){N=0;for(let i=0;i<n;i++)ingestOne(get(i));ingestEnd();}
 function loadPortrait(){
   if(portraitLoad)return portraitLoad;
   // the scan ships as base64 inside a JSON file, because some hosts will not serve raw binary
@@ -1136,27 +1137,38 @@ function loadPortrait(){
    Each reader returns {n, pos(i), alpha(i), color(i), scale(i), quat(i) as [x,y,z,w], flip}; buildScan does the rest. */
 const SCAN_MAX=70000;
 let scanSrc=null;
-function buildScan(src,flip){
-  const n=src.n,f=flip?-1:1;
+// tick(fraction) is awaited between slices of work, so a progress bar can move; without it the build runs straight through
+async function buildScan(src,flip,tick){
+  const n=src.n,f=flip?-1:1,step=tick||(()=>{});
+  let t0=performance.now();
+  const pause=async fr=>{if(tick&&performance.now()-t0>40){await tick(fr);t0=performance.now();}};
   // keep the most opaque splats if there are too many
   const al=new Float32Array(n);let keep=[];
-  for(let i=0;i<n;i++){al[i]=src.alpha(i);if(al[i]>0.1)keep.push(i);}
+  for(let i=0;i<n;i++){al[i]=src.alpha(i);if(al[i]>0.1)keep.push(i);if((i&8191)===8191)await pause(0.12*i/n);}
   if(keep.length>SCAN_MAX){keep.sort((a,b)=>al[b]-al[a]);keep.length=SCAN_MAX;}
   if(keep.length<50)throw new Error('The scan has too few visible splats.');
+  await step(0.15);
   // centre on the median, scale so nearly everything fits the usual view
-  const med=k=>{const v=keep.map(i=>src.pos(i)[k]).sort((a,b)=>a-b);return v[v.length>>1];},ctr=[med(0),med(1),med(2)];
-  const far=keep.map(i=>{const q=src.pos(i);return Math.max(Math.abs(q[0]-ctr[0]),Math.abs(q[1]-ctr[1]),Math.abs(q[2]-ctr[2]));}),dev=far.slice().sort((a,b)=>a-b);
-  const ext=dev[Math.floor(dev.length*0.9)]||1,Ks=2.2/ext;
+  const m=keep.length,px=new Float32Array(m*3);
+  for(let j=0;j<m;j++){const q=src.pos(keep[j]);px[j*3]=q[0];px[j*3+1]=q[1];px[j*3+2]=q[2];}
+  const med=k=>{const v=new Float32Array(m);for(let j=0;j<m;j++)v[j]=px[j*3+k];v.sort();return v[m>>1];},ctr=[med(0),med(1),med(2)];
+  const far=new Float32Array(m);for(let j=0;j<m;j++)far[j]=Math.max(Math.abs(px[j*3]-ctr[0]),Math.abs(px[j*3+1]-ctr[1]),Math.abs(px[j*3+2]-ctr[2]));
+  const dev=far.slice().sort(),ext=dev[Math.floor(m*0.9)]||1,Ks=2.2/ext;
   if(!(ext>0)||!isFinite(ext))throw new Error('The scan could not be read.');
-  keep=keep.filter((i,j)=>far[j]<=ext*1.6);   // drop stray far-off splats, such as a scan's sky shell
+  await step(0.3);
   // flip turns the scan half a turn about the left-right axis (y-down files, or a scan that arrives upside down)
   const tf=v=>[v[0],v[1]*f,v[2]*f];
-  ingestScan(keep.length,j=>{
-    const i=keep[j],q=src.pos(i),sc=src.scale(i).map(v=>v*Ks),Q=src.quat(i),x=Q[0],y=Q[1],z=Q[2],w=Q[3];
+  N=0;
+  for(let j=0;j<m;j++){
+    if(far[j]>ext*1.6)continue;   // drop stray far-off splats, such as a scan's sky shell
+    const i=keep[j],sc=src.scale(i).map(v=>v*Ks),Q=src.quat(i),x=Q[0],y=Q[1],z=Q[2],w=Q[3];
     const R=[[1-2*(y*y+z*z),2*(x*y+z*w),2*(x*z-y*w)],[2*(x*y-z*w),1-2*(x*x+z*z),2*(y*z+x*w)],[2*(x*z+y*w),2*(y*z-x*w),1-2*(x*x+y*y)]];   // R[k] = local axis k
     const ord=[0,1,2].sort((a,b)=>sc[b]-sc[a]);
-    return{p:tf([(q[0]-ctr[0])*Ks,(q[1]-ctr[1])*Ks,(q[2]-ctr[2])*Ks]),long:tf(R[ord[0]]),short:tf(R[ord[2]]),s:[sc[ord[0]],sc[ord[1]],sc[ord[2]]],c:src.color(i),a:al[i]};
-  });
+    ingestOne({p:tf([(px[j*3]-ctr[0])*Ks,(px[j*3+1]-ctr[1])*Ks,(px[j*3+2]-ctr[2])*Ks]),long:tf(R[ord[0]]),short:tf(R[ord[2]]),s:[sc[ord[0]],sc[ord[1]],sc[ord[2]]],c:src.color(i),a:al[i]});
+    if((j&1023)===1023)await pause(0.3+0.65*j/m);
+  }
+  await step(0.97);
+  ingestEnd();
 }
 /* gzip unpacking written out here, so nothing depends on the browser's own stream decompressor */
 function gunzip(src){
@@ -1266,36 +1278,44 @@ function showScan(){portraitLoad=Promise.resolve();portraitOwn=true;setScene('po
 // a phone may withdraw a picked file once the input lets go of it
 const scanInput=$('scanFile');
 const fileBytes=f=>f.arrayBuffer?f.arrayBuffer():new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=()=>no(r.error||new Error('read failed'));r.readAsArrayBuffer(f);});
-const paint=()=>new Promise(r=>setTimeout(r,50));   // let a status line reach the screen before heavy work
+// let the screen catch up: the next frame, or a short wait if frames are not coming (a hidden tab)
+const paint=()=>new Promise(r=>{let done=false;const go=()=>{if(!done){done=true;r();}};requestAnimationFrame(()=>setTimeout(go,0));setTimeout(go,150);});
 let scanBusy=false;
+function scanBar(fr){const b=$('howBar');b.hidden=fr===null;if(fr!==null){const pc=Math.round(clamp(fr,0,1)*100);b.firstElementChild.style.width=pc+'%';b.setAttribute('aria-valuenow',pc);}}
 async function openScan(f){
   if(scanBusy)return;scanBusy=true;$('howPick').classList.add('busy');
   const say=(t,bad)=>{$('howMsg').textContent=t;$('howMsg').classList.toggle('bad',!!bad);if(!bad)$('count').textContent=t;};
-  const mb=(f.size/1048576).toFixed(1)+' MB';let stage='reading';
+  const mb=(f.size/1048576).toFixed(1)+' MB',T=[performance.now()];let stage='reading';
   try{
     if(f.size>600e6)throw new Error('That file is too large to open here ('+mb+'). Crop the scan first.');
     if(!f.size)throw new Error('That file is empty. Export it again from Scaniverse.');
-    say('Reading '+(f.name||'file')+' ('+mb+')…');await paint();
-    const u8=new Uint8Array(await fileBytes(f));
-    stage='unpacking';say('Unpacking '+mb+'…');await paint();
-    const src=readScan(u8);
-    stage='building';say('Building '+Math.min(src.n,SCAN_MAX).toLocaleString('en-US')+' Gabor splats…');await paint();
-    buildScan(src,src.flip);scanSrc=src;scanSrc.flipped=src.flip;
+    scanBar(0.03);say('Reading '+(f.name||'file')+' ('+mb+')…');await paint();
+    const u8=new Uint8Array(await fileBytes(f));T.push(performance.now());
+    stage='unpacking';scanBar(0.12);say('Unpacking '+mb+'…');await paint();
+    const src=readScan(u8);T.push(performance.now());
+    stage='building';scanBar(0.25);say('Building '+Math.min(src.n,SCAN_MAX).toLocaleString('en-US')+' Gabor splats…');await paint();
+    await buildScan(src,src.flip,async fr=>{scanBar(0.25+0.75*fr);await paint();});T.push(performance.now());
+    scanSrc=src;scanSrc.flipped=src.flip;scanTimes={read:T[1]-T[0],unpack:T[2]-T[1],build:T[3]-T[2]};
     cams.portrait.yaw=0;cams.portrait.pitch=0.04;cams.portrait.dist=8.2;cams.portrait.target=[0,0,0];
-    say('');howSet(false);showScan();
+    scanBar(1);await paint();
+    say('');scanBar(null);howSet(false);showScan();
   }catch(err){
     const known=err&&err.message&&/^(That|This|The|Only) /.test(err.message);
-    say(known?err.message:'Something went wrong while '+stage+' the file: '+(err&&(err.name||'')+' '+(err.message||err))+'.',true);
+    scanBar(null);say(known?err.message:'Something went wrong while '+stage+' the file: '+(err&&(err.name||'')+' '+(err.message||err))+'.',true);
     caption();
   }finally{scanBusy=false;$('howPick').classList.remove('busy');scanInput.value='';}
 }
+let scanTimes=null;
 scanInput.addEventListener('change',()=>{const f=scanInput.files&&scanInput.files[0];if(f)openScan(f);});
-function flipScan(){if(!scanSrc)return;scanSrc.flipped=!scanSrc.flipped;try{buildScan(scanSrc,scanSrc.flipped);}catch(err){return;}const keep=presetBy.portrait;showScan();if(keep!==presetBy.portrait)applyPreset(keep);}
+async function flipScan(){
+  if(!scanSrc||scanBusy)return;scanBusy=true;scanSrc.flipped=!scanSrc.flipped;$('count').textContent='Flipping…';
+  try{await paint();await buildScan(scanSrc,scanSrc.flipped,paint);showScan();}catch(err){caption();}finally{scanBusy=false;}
+}
 /* the how-to sheet for making your own scan */
 let howFrom=null;
 function howSet(open){
   if(open===!$('how').hidden)return;
-  if(open){howFrom=document.activeElement;$('howMsg').textContent='';$('howMsg').classList.remove('bad');$('how').hidden=false;$('how').scrollTop=0;$('howClose').focus();}
+  if(open){howFrom=document.activeElement;$('howMsg').textContent='';$('howMsg').classList.remove('bad');scanBar(null);$('how').hidden=false;$('how').scrollTop=0;$('howClose').focus();}
   else{$('how').hidden=true;if(howFrom&&howFrom.isConnected&&howFrom.focus)howFrom.focus();}
 }
 $('howClose').addEventListener('click',()=>howSet(false));
@@ -1633,7 +1653,7 @@ $('midiBtn').addEventListener('click',()=>{
     cvSend({type:'gg:ready'});cvDescribe();
   }
 })();
-window.GROVE={gunzip:gunzip,CV:CV,drawer:drawer,applyPreset:applyPreset,VR:VR,quatDevice:quatDevice,qrot:qrot,HDR:HDR,S:S,cams:cams,get cam(){return cam;},get count(){return SC[S.scene].N;},setScene:setScene};
+window.GROVE={gunzip:gunzip,get scanTimes(){return scanTimes;},CV:CV,drawer:drawer,applyPreset:applyPreset,VR:VR,quatDevice:quatDevice,qrot:qrot,HDR:HDR,S:S,cams:cams,get cam(){return cam;},get count(){return SC[S.scene].N;},setScene:setScene};
 requestAnimationFrame(frame);
 })();
 </script>
