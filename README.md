@@ -70,7 +70,9 @@ The controls sit in a shelf that slides in from the right edge and hangs below t
 
 ## Invisible Hands
 
-**Link** (in the controls shelf) joins a room on the [Invisible Hands](https://github.com/samuelling/InvisibleHands) relay, so that someone elsewhere can move Gabor Grove's controls and read its outputs. Every control in the CV port list below is offered, under the same names, along with the five outputs. A page opened with `?room=<code>` joins by itself. Remote control can be switched off in the Link dialog. `invisible-hands.js` is a copy of the file from that repo; if it fails to load, Gabor Grove runs without it.
+**Link** (in the controls shelf) joins a room on the [Invisible Hands](https://github.com/samuelling/InvisibleHands) relay, so that someone elsewhere can move Gabor Grove's controls and read its outputs. The relay address is built in (`wss://invisible-hands.samuelling.workers.dev`), so there is nothing to configure: press Link, start a room, and send the invite link, or open the page with `?room=<code>`.
+
+Every control in the CV port list below is offered under the same name: all 18 sliders, plus `angle`, `scene`, `preset` and `play`. The five outputs are offered too. Remote control can be switched off in the Link dialog. `invisible-hands.js` is a copy of the file from that repo; if it fails to load, Gabor Grove runs without it.
 
 ## CV port
 
@@ -91,7 +93,7 @@ addEventListener('message', e => {
 });
 ```
 
-- **Inputs:** `speed`, `pointSpread`, `spatialFreq`, `sfSweep`, `colorByAngle`, `contrast`, `contrastSweep`, `pullApart`, `pullSweep`, `nesting`, `depth3d`, `lens`, `angle` (the carrier angle itself, one turn per 0..1), `scene` (the tab, in thirds: Portrait, Gabor of Gabors, Mushroom grove), `spreadSweep`, `scanColor`, `sizeVariance`, `sfVariance`, `varianceSweep`, `redrawRate`.
+- **Inputs:** `speed`, `pointSpread`, `spatialFreq`, `sfSweep`, `colorByAngle`, `contrast`, `contrastSweep`, `pullApart`, `pullSweep`, `nesting`, `depth3d`, `lens`, `angle` (the carrier angle itself, one turn per 0..1), `scene` (the tab, in thirds: Portrait, Gabor of Gabors, Mushroom grove), `spreadSweep`, `scanColor`, `sizeVariance`, `sfVariance`, `varianceSweep`, `redrawRate`, `preset` (the current tab's presets, spread evenly over 0..1) and `play` (below 0.5 pauses, above runs).
 - **Outputs:** `angle`, `angleSin`, `spatialFreq`, `contrast`, `pullApart`.
 - A slider moved by hand, or set with `gg:set`, becomes the centre that `gg:mod` swings around.
 - Pages on the same origin can use `new BroadcastChannel('gabor-grove')` with the same messages.

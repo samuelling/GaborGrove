@@ -1653,7 +1653,8 @@ drawer.set(matchMedia('(min-width:640px) and (min-aspect-ratio:5/4)').matches);
         MIDI CC 40.. (one per output), when MIDI is connected */
 const CV_IN=[['speed','speed','Rotation speed'],['pointSpread','psf','Point spread'],['spatialFreq','sf','Spatial frequency'],['sfSweep','sweep','SF sweep'],
   ['colorByAngle','col','Color by angle'],['contrast','con','Contrast'],['contrastSweep','csweep','Contrast sweep'],['pullApart','pull','Pull apart'],
-  ['pullSweep','psweep','Pull sweep'],['nesting','nest','Nesting'],['depth3d','depth','3D depth'],['lens','lens','Lens correction'],['angle',null,'Carrier angle'],['scene',null,'Tab'],['spreadSweep','bsweep','Spread sweep'],['scanColor','sat','Scan color'],['sizeVariance','svar','Size variance'],['sfVariance','fvar','SF variance'],['varianceSweep','vsweep','Variance sweep'],['redrawRate','redraw','Redraw rate']];
+  ['pullSweep','psweep','Pull sweep'],['nesting','nest','Nesting'],['depth3d','depth','3D depth'],['lens','lens','Lens correction'],['angle',null,'Carrier angle'],['scene',null,'Tab'],['spreadSweep','bsweep','Spread sweep'],['scanColor','sat','Scan color'],['sizeVariance','svar','Size variance'],['sfVariance','fvar','SF variance'],['varianceSweep','vsweep','Variance sweep'],['redrawRate','redraw','Redraw rate'],
+  ['preset',null,'Preset'],['play',null,'Play','toggle']];   // new controls go at the end, so MIDI CC numbers stay put
 const CV_OUT=['angle','angleSin','spatialFreq','contrast','pullApart'];
 const CV={base:{},mod:{},dirty:new Set(),peers:new Set(),bc:null,midi:null,lastIn:0,lastOut:0,count:0,sent:{}};
 const cvEl=name=>{const r=CV_IN.find(x=>x[0]===name);return r&&r[1]?$(r[1]):null;};
@@ -1685,6 +1686,13 @@ function cvTick(now){
     const el=cvEl(name),b=CV.base[name],m=CV.mod[name]||0;
     if(name==='angle'){S.theta=((b===undefined?0:b)+m)*TAU;continue;}
     if(name==='scene'){const want=CV_SCENES[Math.min(2,Math.floor(clamp((b||0)+m,0,1)*3))];if(want!==S.scene&&want!==wantScene)setScene(want,true);continue;}
+    if(name==='preset'){
+      // the tab's presets spread evenly over 0..1. A preset moves most sliders, so what was remembered as each
+      // slider's resting value is forgotten: modulation then swings around where the preset put it
+      const list=PRESETS[S.scene]||[],i=Math.min(list.length-1,Math.floor(clamp((b||0)+m,0,1)*list.length));
+      if(list.length&&i!==presetBy[S.scene]){applyPreset(i);for(const k of Object.keys(CV.base))if(cvEl(k))delete CV.base[k];}
+      continue;}
+    if(name==='play'){if((((b===undefined?1:b)+m)>=0.5)!==S.playing)$('play').click();continue;}
     if(!el)continue;
     const n=clamp((b===undefined?(CV.base[name]=cvNorm(el)):b)+m,0,1),v=+el.min+n*(+el.max-+el.min);
     if(Math.abs(v-+el.value)>1e-6){el.value=v;el.dispatchEvent(new Event('input'));}
@@ -1710,8 +1718,9 @@ $('midiBtn').addEventListener('click',()=>{
    The file is optional. Without it the page works as before and the Link button stays hidden. */
 const hands=window.InvisibleHands?InvisibleHands.create({
   app:'gaborgrove',name:'Gabor Grove',
-  params:CV_IN.map(r=>({id:r[0],label:r[2],
-    get:()=>{const el=r[1]?$(r[1]):null;return el?cvNorm(el):r[0]==='angle'?((S.theta/TAU)%1+1)%1:(CV_SCENES.indexOf(S.scene)+0.5)/3;},
+  params:CV_IN.map(r=>({id:r[0],label:r[2],kind:r[3]||'cont',
+    get:()=>{const el=r[1]?$(r[1]):null;if(el)return cvNorm(el);
+      return r[0]==='angle'?((S.theta/TAU)%1+1)%1:r[0]==='preset'?(Math.max(0,presetBy[S.scene]||0)+0.5)/Math.max(1,(PRESETS[S.scene]||[]).length):r[0]==='play'?(S.playing?1:0):(CV_SCENES.indexOf(S.scene)+0.5)/3;},
     set:v=>cvSet(r[0],v),mod:v=>cvMod(r[0],v)})),
   outs:CV_OUT.map(k=>({id:k,label:{angle:'Carrier angle',angleSin:'Angle, as a sine',spatialFreq:'Spatial frequency',contrast:'Contrast',pullApart:'Pull apart'}[k]||k,get:()=>cvValues()[k]}))
 }):null;
