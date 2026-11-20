@@ -16,6 +16,7 @@
   --cream:#f1e3c4;
   --cap:#e4583c;
   --glow:#74f0d2;
+  --ih-teal:#2FB3B0;--ih-flame:#FF7A45;--ih-cut:#101217;
   --panel:rgba(9,18,27,.78);
   --line:rgba(241,227,196,.18);
   --dim:rgba(241,227,196,.62);
@@ -60,7 +61,8 @@ button:hover{border-color:var(--dim)}
 #play{min-width:78px;background:var(--cap);border-color:var(--cap);color:#1a0b06;font-weight:500}
 .speed{flex:1 1 180px;display:flex;align-items:center;gap:10px;min-width:160px}
 .more .speed{flex-basis:260px}
-.speed label{font-size:11px;color:var(--dim);flex:none;min-width:86px}
+.speed label{font-size:11px;color:var(--dim);flex:none;min-width:86px;white-space:nowrap}
+body.ih-tags .speed label{min-width:104px}
 .speed output{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;min-width:48px;text-align:right}
 input[type=range]{flex:1;min-width:0;accent-color:var(--glow);height:28px}
 fieldset{border:0;margin:0;padding:0;display:flex;align-items:center;gap:8px;min-width:0}
@@ -109,9 +111,18 @@ body.gabor #grip{background:rgba(9,18,27,.9)}
 #midiBtn{padding:5px 12px;min-height:30px;font-size:12px}
 /* Invisible Hands: a badge that is always on screen, a card at the top of the shelf, and a mark on whatever a remote hand is moving.
    .ihMark is the slot for the brand icon: empty, it takes no room. */
-.ihMark{display:inline-flex;flex:none;width:1.25em;height:1.25em;align-items:center;justify-content:center}
+.ihMark{display:inline-flex;flex:none;align-items:center;justify-content:center;transition:opacity .3s,filter .3s}
 .ihMark:empty{display:none}
-.ihMark svg,.ihMark img{width:100%;height:100%;display:block}
+.ihMark:not(:empty)+.ihDot{display:none}   /* with the mark there, its colour says linked or not */
+body:not(.ih-on) .ihMark{opacity:.6;filter:grayscale(1)}
+.ihMark.ih-hit .ih-flame{transform:translate(2.5px,-1.5px)}
+/* the mark pinned on each control that others can move. Corner pins for the tabs and the Play button */
+.ihHost{position:relative;display:inline-flex;align-self:flex-start;pointer-events:none}
+.ihHost>*{pointer-events:auto}
+.ihHost>.ih-tag{position:absolute;top:-6px;right:-5px;margin:0;width:15px;height:15px;pointer-events:none}
+.ihHost.forTabs>.ih-tag{top:4px}
+.presets>.ih-tag{align-self:center;width:15px;height:15px;margin:0 1px 0 0}
+.readout .ih-tag{margin:0 0 0 .4em}
 .ihDot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--dim);opacity:.55}
 body.ih-wait .ihDot{background:#e8b04a;opacity:1}
 body.ih-on .ihDot{background:var(--glow);opacity:1;box-shadow:0 0 8px var(--glow)}
@@ -121,24 +132,23 @@ body.ih-hot .ihDot{animation:ihPulse .45s ease-in-out infinite alternate}
 @media (prefers-reduced-motion:reduce){body.ih-hot .ihDot{animation:none}}
 #topRight{position:fixed;top:7px;right:10px;display:flex;gap:6px;align-items:center;pointer-events:none}
 #topRight button{pointer-events:auto;padding:3px 12px;min-height:28px;font-size:12px;font-weight:500;letter-spacing:.04em;background:var(--panel);color:var(--cream);text-shadow:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-#ihBtn{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+#ihBtn{position:relative;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;padding-left:5px}
 #ihBtn[hidden]{display:none}
 body.ih-on #ihBtn{border-color:var(--glow);color:var(--glow)}
 #ihN:empty{display:none}
-#ihN{font-family:var(--mono);font-size:11px;padding:0 6px;border-radius:999px;background:var(--glow);color:#06201b}
+#ihN{position:absolute;top:-6px;right:-4px;min-width:16px;text-align:center;font-family:var(--mono);font-size:10px;line-height:16px;letter-spacing:0;padding:0 4px;border-radius:999px;background:var(--ih-flame);color:#1a0b06}
 @media (max-width:359px){#ihBtn .ihLong{display:none}}
 #ihRow[hidden]{display:none}
 #linkBtn{flex:1;display:flex;align-items:center;gap:11px;text-align:left;min-height:54px;padding:9px 14px;border-radius:14px;border-color:rgba(116,240,210,.45);background:rgba(116,240,210,.07)}
 #linkBtn:hover{border-color:var(--glow)}
-#linkBtn .ihMark{font-size:20px}
 #linkBtn .ihText{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 #linkBtn b{font-family:var(--display);font-style:italic;font-weight:500;font-size:18px;line-height:1.1}
 #linkBtn small{font-size:11.5px;color:var(--dim);line-height:1.3}
 #linkState{flex:none;font-size:12px;font-weight:500;padding:4px 11px;border-radius:999px;border:1px solid var(--glow);color:var(--glow);white-space:nowrap}
 body.ih-on #linkBtn{border-color:var(--glow);background:rgba(116,240,210,.13)}
 body.ih-on #linkState{background:var(--glow);color:#06201b}
-label.ihHot{color:var(--glow)!important;text-shadow:0 0 10px var(--glow)}
-label.ihHot::before{content:"";display:inline-block;width:6px;height:6px;margin-right:5px;border-radius:50%;background:var(--glow);vertical-align:middle}
+label.ihHot{color:var(--ih-flame)!important}
+#linkPanel .ih-head{display:none}   /* the dialog's own title carries the mark */
 #linkTitle{display:flex;align-items:center;gap:9px}
 .ihMore{margin:14px 0 0;font-size:12px;color:var(--dim)}
 .ihMore a{color:var(--glow)}
@@ -204,7 +214,7 @@ body.vr #gl{cursor:default}
   </div>
   <div class="presets" id="presets" role="group" aria-label="Presets"></div>
   <div id="topRight">
-    <button id="ihBtn" type="button" aria-haspopup="dialog" aria-label="Invisible Hands: let someone else move these controls"><span class="ihMark" aria-hidden="true"></span><span class="ihDot" aria-hidden="true"></span><span><span class="ihLong">Invisible </span>Hands</span><span id="ihN" aria-hidden="true"></span></button>
+    <button id="ihBtn" type="button" aria-haspopup="dialog" aria-label="Invisible Hands: let someone else move these controls"><span class="ihMark" data-size="20" aria-hidden="true"></span><span class="ihDot" aria-hidden="true"></span><span><span class="ihLong">Invisible </span>Hands</span><span id="ihN" aria-hidden="true"></span></button>
     <button id="wtfBtn" type="button" aria-haspopup="dialog" aria-label="WTF? What this is, explained">WTF?</button>
   </div>
 </header>
@@ -274,10 +284,10 @@ body.vr #gl{cursor:default}
 <div id="linkBox" class="modal" role="dialog" aria-modal="true" aria-labelledby="linkTitle" hidden>
   <div class="card">
     <button id="linkClose" class="modalClose" type="button" aria-label="Close">×</button>
-    <h2 id="linkTitle"><span class="ihMark" aria-hidden="true"></span>Invisible Hands</h2>
+    <h2 id="linkTitle"><span class="ihMark" data-size="30" aria-hidden="true"></span>Invisible Hands</h2>
     <p class="lede">Let someone else move these controls from wherever they are. Start a room and send them the link, or join theirs.</p>
     <div id="linkPanel" style="margin-top:14px"></div>
-    <p class="ihMore">Works with Invisible Hands: every slider here, plus the tab, the preset and play. <a href="https://samuelling.github.io/InvisibleHands/" target="_blank" rel="noopener">What is Invisible Hands?</a></p>
+    <p class="ihMore">The little knob marks everything others can move: every slider, the carrier angle, the tab, the preset and play. It is grey until you are linked. <a href="https://samuelling.github.io/InvisibleHands/" target="_blank" rel="noopener">What is Invisible Hands?</a></p>
   </div>
 </div>
 <div id="err">This demo needs WebGL 2, which this browser did not provide.</div>
@@ -306,7 +316,7 @@ body.vr #gl{cursor:default}
   <div id="dockBody">
   <div class="row" id="ihRow">
     <button id="linkBtn" type="button" aria-haspopup="dialog">
-      <span class="ihMark" aria-hidden="true"></span>
+      <span class="ihMark" data-size="34" aria-hidden="true"></span>
       <span class="ihText"><b>Invisible Hands</b><small id="linkSub">Let someone, anywhere, move these controls</small></span>
       <span id="linkState">Start</span>
     </button>
@@ -1657,9 +1667,9 @@ const PRESETS={
     {name:'In color',speed:2,world:1,con:85,sat:100},
     {name:'Faithful',speed:0,world:1,con:0,sat:100}]
 };
-function markPreset(i){const b=[...$('presets').children].filter(x=>!x.dataset.tool);for(let k=0;k<PRESETS[S.scene].length&&k<b.length;k++)b[k].setAttribute('aria-pressed',String(k===i));}
+function markPreset(i){const b=[...$('presets').children].filter(x=>x.tagName==='BUTTON'&&!x.dataset.tool);for(let k=0;k<PRESETS[S.scene].length&&k<b.length;k++)b[k].setAttribute('aria-pressed',String(k===i));}
 function renderPresets(){
-  const box=$('presets');box.textContent='';
+  const box=$('presets');box.textContent='';if(box._ihTag)box.appendChild(box._ihTag);
   PRESETS[S.scene].forEach((p,i)=>{const b=document.createElement('button');b.type='button';b.textContent=p.name;b.addEventListener('click',()=>applyPreset(i));box.appendChild(b);});
   if(S.scene==='portrait'){
     const mk=(t,tip,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=t;b.title=tip;b.dataset.tool='1';b.addEventListener('click',fn);return b;};
@@ -1770,6 +1780,21 @@ const hands=window.InvisibleHands?InvisibleHands.create({
 }):null;
 if(hands){
   $('linkPanel').appendChild(hands.panel());
+  // the brand mark, drawn by the library: in the badge, the card and the dialog, and pinned on every control offered to the room
+  if(InvisibleHands.icon)for(const m of document.querySelectorAll('.ihMark'))m.appendChild(InvisibleHands.icon({size:+m.dataset.size||20}));
+  if(hands.tag){
+    document.body.classList.add('ih-tags');
+    const host=(el,id,cls)=>{const w=document.createElement('span');w.className='ihHost'+(cls?' '+cls:'');el.replaceWith(w);w.append(el,hands.tag(id));};
+    for(const r of CV_IN){
+      const lab=r[1]&&document.querySelector('label[for="'+r[1]+'"]');
+      if(lab)lab.appendChild(hands.tag(r[0]));
+      else if(r[0]==='angle')document.querySelector('.readout span').appendChild(hands.tag('angle'));
+      else if(r[0]==='scene')host(document.querySelector('.tabs'),'scene','forTabs');
+      else if(r[0]==='play')host($('play'),'play');
+      else if(r[0]==='preset'){const box=$('presets');box._ihTag=hands.tag('preset');box.prepend(box._ihTag);}
+    }
+    hands.on('in',()=>{for(const m of document.querySelectorAll('.ihMark')){m.classList.add('ih-hit');clearTimeout(m._t);m._t=setTimeout(()=>m.classList.remove('ih-hit'),220);}});
+  }
   let linkFrom=null;
   const linkSet=(open,from)=>{if(open===!$('linkBox').hidden)return;$('linkBox').hidden=!open;if(open){linkFrom=from||null;$('linkClose').focus();}else if(linkFrom)linkFrom.focus();};
   for(const id of ['linkBtn','ihBtn'])$(id).addEventListener('click',()=>linkSet(true,$(id)));

@@ -70,17 +70,16 @@ The controls sit in a shelf that slides in from the right edge and hangs below t
 
 ## Invisible Hands
 
-Gabor Grove works with [Invisible Hands](https://samuelling.github.io/InvisibleHands/): someone elsewhere can move its controls and read its outputs. It is shown in three places:
+Gabor Grove works with [Invisible Hands](https://samuelling.github.io/InvisibleHands/): someone elsewhere can move its controls and read its outputs. It carries the Invisible Hands mark (the little knob), drawn by the library, in these places:
 
-- an **Invisible Hands** badge at the top right, always on screen. Its dot lights when linked, a number counts the other apps in the room, and the dot pulses while a remote hand is moving something.
+- an **Invisible Hands** badge at the top right, always on screen. The mark is grey until linked; a number counts the other apps in the room; the mark's orange ink jumps whenever a remote hand moves something.
 - an **Invisible Hands** card at the top of the controls shelf, with the same state in words.
-- the label of any slider a remote hand is moving lights up, for as long as it is being moved or a modulation is held on it.
+- **pinned on every control that others can move** (`hands.tag(id)`): after each slider's label and the carrier angle, and on the corner of the tabs, the preset row and the Play button. Grey when not linked, coloured when linked; its pointer follows the value.
+- the label of a slider turns orange for as long as a remote hand is moving it or holding a modulation on it.
 
-The badge and the card open the same dialog: start a room and send the invite link, join a room, or switch remote control off. Opening the page with `?room=<code>` joins by itself. The relay address is built in (`wss://invisible-hands.samuelling.workers.dev`); it takes connections from this site without a key, so a copy hosted elsewhere needs its own key (see the Invisible Hands site).
+The badge and the card open the same dialog: start a room and send the invite link, join a room, or switch remote control off. Opening the page with `?room=<code>` joins by itself. The relay address is built in (`wss://invisible-hands.samuelling.workers.dev`) and needs no key.
 
-Every control in the CV port list below is offered under the same name: all 18 sliders, plus `angle`, `scene`, `preset` and `play`. The five outputs are offered too. `invisible-hands.js` is a copy of the file from that repo; if it fails to load, Gabor Grove runs without it and the badge and card are hidden.
-
-The elements with class `ihMark` are the slot for the Invisible Hands brand icon. Empty, they take no room.
+Every control in the CV port list below is offered under the same name: all 18 sliders, plus `angle`, `scene`, `preset` and `play`. The five outputs are offered too. `invisible-hands.js` is a copy of the file from that repo; if it fails to load, Gabor Grove runs without it and the badge, card and marks are absent. The mark's colours are the brand's dark-page inks, set once as `--ih-teal`, `--ih-flame` and `--ih-cut`.
 
 ## CV port
 
