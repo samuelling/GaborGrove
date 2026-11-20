@@ -106,8 +106,42 @@ body.gabor #grip{background:rgba(9,18,27,.9)}
 .led{width:9px;height:9px;border-radius:50%;background:var(--line);flex:none}
 .led.on{background:var(--glow);box-shadow:0 0 8px var(--glow)}
 #cvStat{font-family:var(--mono);font-size:12px;color:var(--dim)}
-#midiBtn,#linkBtn{padding:5px 12px;min-height:30px;font-size:12px}
-#linkBtn.on{border-color:var(--glow);color:var(--glow)}
+#midiBtn{padding:5px 12px;min-height:30px;font-size:12px}
+/* Invisible Hands: a badge that is always on screen, a card at the top of the shelf, and a mark on whatever a remote hand is moving.
+   .ihMark is the slot for the brand icon: empty, it takes no room. */
+.ihMark{display:inline-flex;flex:none;width:1.25em;height:1.25em;align-items:center;justify-content:center}
+.ihMark:empty{display:none}
+.ihMark svg,.ihMark img{width:100%;height:100%;display:block}
+.ihDot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--dim);opacity:.55}
+body.ih-wait .ihDot{background:#e8b04a;opacity:1}
+body.ih-on .ihDot{background:var(--glow);opacity:1;box-shadow:0 0 8px var(--glow)}
+body.ih-err .ihDot{background:#e2634a;opacity:1}
+body.ih-hot .ihDot{animation:ihPulse .45s ease-in-out infinite alternate}
+@keyframes ihPulse{from{transform:scale(1)}to{transform:scale(1.7)}}
+@media (prefers-reduced-motion:reduce){body.ih-hot .ihDot{animation:none}}
+#topRight{position:fixed;top:7px;right:10px;display:flex;gap:6px;align-items:center;pointer-events:none}
+#topRight button{pointer-events:auto;padding:3px 12px;min-height:28px;font-size:12px;font-weight:500;letter-spacing:.04em;background:var(--panel);color:var(--cream);text-shadow:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#ihBtn{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+#ihBtn[hidden]{display:none}
+body.ih-on #ihBtn{border-color:var(--glow);color:var(--glow)}
+#ihN:empty{display:none}
+#ihN{font-family:var(--mono);font-size:11px;padding:0 6px;border-radius:999px;background:var(--glow);color:#06201b}
+@media (max-width:359px){#ihBtn .ihLong{display:none}}
+#ihRow[hidden]{display:none}
+#linkBtn{flex:1;display:flex;align-items:center;gap:11px;text-align:left;min-height:54px;padding:9px 14px;border-radius:14px;border-color:rgba(116,240,210,.45);background:rgba(116,240,210,.07)}
+#linkBtn:hover{border-color:var(--glow)}
+#linkBtn .ihMark{font-size:20px}
+#linkBtn .ihText{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+#linkBtn b{font-family:var(--display);font-style:italic;font-weight:500;font-size:18px;line-height:1.1}
+#linkBtn small{font-size:11.5px;color:var(--dim);line-height:1.3}
+#linkState{flex:none;font-size:12px;font-weight:500;padding:4px 11px;border-radius:999px;border:1px solid var(--glow);color:var(--glow);white-space:nowrap}
+body.ih-on #linkBtn{border-color:var(--glow);background:rgba(116,240,210,.13)}
+body.ih-on #linkState{background:var(--glow);color:#06201b}
+label.ihHot{color:var(--glow)!important;text-shadow:0 0 10px var(--glow)}
+label.ihHot::before{content:"";display:inline-block;width:6px;height:6px;margin-right:5px;border-radius:50%;background:var(--glow);vertical-align:middle}
+#linkTitle{display:flex;align-items:center;gap:9px}
+.ihMore{margin:14px 0 0;font-size:12px;color:var(--dim)}
+.ihMore a{color:var(--glow)}
 body.embed header,body.embed #dock{display:none}
 #vrui{display:none}
 body.vr header,body.vr #dock{display:none}
@@ -121,7 +155,6 @@ body.vr #gl{cursor:default}
 @media (orientation:portrait){body.vr #vrTurn{display:flex}}
 #vrEnter{background:var(--glow);border-color:var(--glow);color:#06201b;font-weight:500}
 #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:15px}
-#wtfBtn{position:fixed;top:7px;right:10px;pointer-events:auto;padding:3px 12px;min-height:28px;font-size:12px;font-weight:500;letter-spacing:.04em;background:var(--panel);color:var(--cream);text-shadow:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .modal{position:fixed;inset:0;z-index:5;background:rgba(5,9,14,.74);display:flex;justify-content:center;padding:14px;overflow-y:auto;overscroll-behavior:contain;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .modal .card{position:relative;width:min(560px,100%);margin:auto 0;background:#0c1721;border:1px solid var(--line);border-radius:16px;padding:20px 20px 22px}
 .modal h2{font-family:var(--display);font-style:italic;font-weight:500;font-size:25px;line-height:1.1;margin:0 44px 2px 0}
@@ -170,7 +203,10 @@ body.vr #gl{cursor:default}
     <label><input type="radio" name="scene" id="tabGrove" value="grove"><span>Mushroom grove</span></label>
   </div>
   <div class="presets" id="presets" role="group" aria-label="Presets"></div>
-  <button id="wtfBtn" type="button" aria-haspopup="dialog" aria-label="WTF? What this is, explained">WTF?</button>
+  <div id="topRight">
+    <button id="ihBtn" type="button" aria-haspopup="dialog" aria-label="Invisible Hands: let someone else move these controls"><span class="ihMark" aria-hidden="true"></span><span class="ihDot" aria-hidden="true"></span><span><span class="ihLong">Invisible </span>Hands</span><span id="ihN" aria-hidden="true"></span></button>
+    <button id="wtfBtn" type="button" aria-haspopup="dialog" aria-label="WTF? What this is, explained">WTF?</button>
+  </div>
 </header>
 <div id="wtf" class="modal" role="dialog" aria-modal="true" aria-labelledby="wtfTitle" hidden>
   <div class="card">
@@ -238,9 +274,10 @@ body.vr #gl{cursor:default}
 <div id="linkBox" class="modal" role="dialog" aria-modal="true" aria-labelledby="linkTitle" hidden>
   <div class="card">
     <button id="linkClose" class="modalClose" type="button" aria-label="Close">×</button>
-    <h2 id="linkTitle">Invisible Hands</h2>
+    <h2 id="linkTitle"><span class="ihMark" aria-hidden="true"></span>Invisible Hands</h2>
     <p class="lede">Let someone else move these controls from wherever they are. Start a room and send them the link, or join theirs.</p>
     <div id="linkPanel" style="margin-top:14px"></div>
+    <p class="ihMore">Works with Invisible Hands: every slider here, plus the tab, the preset and play. <a href="https://samuelling.github.io/InvisibleHands/" target="_blank" rel="noopener">What is Invisible Hands?</a></p>
   </div>
 </div>
 <div id="err">This demo needs WebGL 2, which this browser did not provide.</div>
@@ -267,6 +304,13 @@ body.vr #gl{cursor:default}
     </div>
   </div>
   <div id="dockBody">
+  <div class="row" id="ihRow">
+    <button id="linkBtn" type="button" aria-haspopup="dialog">
+      <span class="ihMark" aria-hidden="true"></span>
+      <span class="ihText"><b>Invisible Hands</b><small id="linkSub">Let someone, anywhere, move these controls</small></span>
+      <span id="linkState">Start</span>
+    </button>
+  </div>
   <div class="row more">
     <fieldset>
       <legend>Rotate</legend>
@@ -389,7 +433,6 @@ body.vr #gl{cursor:default}
       <span class="led" id="cvLed"></span><output id="cvStat">idle</output>
     </fieldset>
     <button id="midiBtn" type="button">Connect MIDI</button>
-    <button id="linkBtn" type="button" aria-haspopup="dialog">Link</button>
   </div>
   <div class="row more">
     <label class="check"><input type="checkbox" id="carriers" checked>Carriers on</label>
@@ -1715,25 +1758,45 @@ $('midiBtn').addEventListener('click',()=>{
   }).catch(()=>{$('midiBtn').textContent='MIDI refused';});
 });
 /* Invisible Hands: the same controls and outputs, offered to anyone in the same room over the internet.
-   The file is optional. Without it the page works as before and the Link button stays hidden. */
+   The file is optional. Without it the page works as before and the Invisible Hands badge and card stay hidden. */
+const ihHot=new Map();   // control -> when a remote hand last moved it (Infinity while a modulation is held on it)
 const hands=window.InvisibleHands?InvisibleHands.create({
   app:'gaborgrove',name:'Gabor Grove',
   params:CV_IN.map(r=>({id:r[0],label:r[2],kind:r[3]||'cont',
     get:()=>{const el=r[1]?$(r[1]):null;if(el)return cvNorm(el);
       return r[0]==='angle'?((S.theta/TAU)%1+1)%1:r[0]==='preset'?(Math.max(0,presetBy[S.scene]||0)+0.5)/Math.max(1,(PRESETS[S.scene]||[]).length):r[0]==='play'?(S.playing?1:0):(CV_SCENES.indexOf(S.scene)+0.5)/3;},
-    set:v=>cvSet(r[0],v),mod:v=>cvMod(r[0],v)})),
+    set:v=>{ihHot.set(r[0],performance.now());cvSet(r[0],v);},mod:v=>{ihHot.set(r[0],v?Infinity:performance.now());cvMod(r[0],v);}})),
   outs:CV_OUT.map(k=>({id:k,label:{angle:'Carrier angle',angleSin:'Angle, as a sine',spatialFreq:'Spatial frequency',contrast:'Contrast',pullApart:'Pull apart'}[k]||k,get:()=>cvValues()[k]}))
 }):null;
 if(hands){
   $('linkPanel').appendChild(hands.panel());
-  const linkSet=open=>{if(open===!$('linkBox').hidden)return;$('linkBox').hidden=!open;if(open)$('linkClose').focus();else $('linkBtn').focus();};
-  $('linkBtn').addEventListener('click',()=>linkSet(true));
+  let linkFrom=null;
+  const linkSet=(open,from)=>{if(open===!$('linkBox').hidden)return;$('linkBox').hidden=!open;if(open){linkFrom=from||null;$('linkClose').focus();}else if(linkFrom)linkFrom.focus();};
+  for(const id of ['linkBtn','ihBtn'])$(id).addEventListener('click',()=>linkSet(true,$(id)));
   $('linkClose').addEventListener('click',()=>linkSet(false));
   $('linkBox').addEventListener('click',e=>{if(e.target===$('linkBox'))linkSet(false);});
   window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('linkBox').hidden)linkSet(false);});
-  const linkShow=()=>{const on=hands.status==='on';$('linkBtn').classList.toggle('on',on);$('linkBtn').textContent=on?'Linked · '+hands.peers.length:hands.status==='off'?'Link':'Linking…';};
+  const linkShow=()=>{
+    const st=hands.status,on=st==='on',wait=st==='connecting'||st==='retrying',bad=st==='error',n=hands.peers.length,cl=document.body.classList;
+    cl.toggle('ih-on',on);cl.toggle('ih-wait',wait);cl.toggle('ih-err',bad);
+    $('ihN').textContent=on&&n?String(n):'';
+    const others=n+(n===1?' other app':' other apps')+' in the room';
+    $('ihBtn').setAttribute('aria-label','Invisible Hands: '+(on?'linked, '+others:wait?'joining a room':bad?'not linked':'off')+'. Open to start or join a room');
+    $('linkState').textContent=on?'Linked':wait?'Joining…':bad?'Problem':'Start';
+    $('linkSub').textContent=on?(n?others.charAt(0).toUpperCase()+others.slice(1):'Room open. Send someone the invite link.'):wait?'Joining the room…':bad?(hands.error||'The relay said no.'):'Let someone, anywhere, move these controls';
+  };
   hands.on('status',linkShow);hands.on('peers',linkShow);linkShow();
-}else $('linkBtn').hidden=true;
+  // mark what a remote hand is moving: its label lights up, and the badge's dot pulses
+  setInterval(()=>{
+    const now=performance.now(),linked=hands.status==='on'&&hands.peers.length>0&&hands.allow!==false;let any=false;
+    for(const [name,t0] of ihHot){
+      const hot=linked&&now-t0<900,el=cvEl(name),lab=el&&document.querySelector('label[for="'+el.id+'"]');
+      if(lab)lab.classList.toggle('ihHot',hot);
+      if(hot)any=true;else ihHot.delete(name);
+    }
+    document.body.classList.toggle('ih-hot',any);
+  },200);
+}else{$('ihBtn').hidden=true;$('ihRow').hidden=true;}
 // ?embed hides the interface for use inside another page; ?cv or ?embed says hello to whoever opened or framed us
 (function(){
   const q=location.search;

@@ -70,9 +70,17 @@ The controls sit in a shelf that slides in from the right edge and hangs below t
 
 ## Invisible Hands
 
-**Link** (in the controls shelf) joins a room on the [Invisible Hands](https://github.com/samuelling/InvisibleHands) relay, so that someone elsewhere can move Gabor Grove's controls and read its outputs. The relay address is built in (`wss://invisible-hands.samuelling.workers.dev`), so there is nothing to configure: press Link, start a room, and send the invite link, or open the page with `?room=<code>`.
+Gabor Grove works with [Invisible Hands](https://samuelling.github.io/InvisibleHands/): someone elsewhere can move its controls and read its outputs. It is shown in three places:
 
-Every control in the CV port list below is offered under the same name: all 18 sliders, plus `angle`, `scene`, `preset` and `play`. The five outputs are offered too. Remote control can be switched off in the Link dialog. `invisible-hands.js` is a copy of the file from that repo; if it fails to load, Gabor Grove runs without it.
+- an **Invisible Hands** badge at the top right, always on screen. Its dot lights when linked, a number counts the other apps in the room, and the dot pulses while a remote hand is moving something.
+- an **Invisible Hands** card at the top of the controls shelf, with the same state in words.
+- the label of any slider a remote hand is moving lights up, for as long as it is being moved or a modulation is held on it.
+
+The badge and the card open the same dialog: start a room and send the invite link, join a room, or switch remote control off. Opening the page with `?room=<code>` joins by itself. The relay address is built in (`wss://invisible-hands.samuelling.workers.dev`); it takes connections from this site without a key, so a copy hosted elsewhere needs its own key (see the Invisible Hands site).
+
+Every control in the CV port list below is offered under the same name: all 18 sliders, plus `angle`, `scene`, `preset` and `play`. The five outputs are offered too. `invisible-hands.js` is a copy of the file from that repo; if it fails to load, Gabor Grove runs without it and the badge and card are hidden.
+
+The elements with class `ihMark` are the slot for the Invisible Hands brand icon. Empty, they take no room.
 
 ## CV port
 
